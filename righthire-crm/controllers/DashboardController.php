@@ -2,58 +2,54 @@
 /**
  * Dashboard Controller
  * 
- * This controller handles all dashboard-related actions.
+ * This controller handles the dashboard page.
  */
 
 require_once 'models/Lead.php';
-require_once 'models/CallLog.php';
 require_once 'models/User.php';
+require_once 'models/CallLog.php';
 
 class DashboardController {
     private $leadModel;
-    private $callLogModel;
     private $userModel;
+    private $callLogModel;
     
     /**
      * Constructor
      */
     public function __construct() {
         $this->leadModel = new Lead();
-        $this->callLogModel = new CallLog();
         $this->userModel = new User();
+        $this->callLogModel = new CallLog();
     }
     
     /**
-     * Dashboard index page
+     * Index page
      */
     public function index() {
-        // Require login
-        requireLogin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get lead stats
-        $stats = $this->leadModel->getStats();
+        // Get lead statistics
+        $stats = $this->leadModel->getLeadStats();
         
         // Get today's follow-ups
         $todayFollowUps = $this->leadModel->getTodayFollowUps();
         
-        // Get recent calls
-        $recentCalls = $this->callLogModel->getRecent(5);
-        
         // Get daily call count
-        $dailyCallCount = $this->leadModel->getDailyCallCount(7);
+        $dailyCallCount = $this->leadModel->getDailyCallCount();
         
-        // Get employee stats
+        // Get recent call logs
+        $recentCalls = $this->leadModel->getRecentCallLogs();
+        
+        // Get employee performance stats (admin only)
+        $employeeStats = [];
         if (hasRole('administrator')) {
-            $employeeStats = $this->userModel->getEmployeePerformanceStats();
-        } else {
-            $employeeStats = $this->userModel->getEmployeePerformanceTrend(getCurrentUserId(), 6);
+            $employeeStats = $this->leadModel->getEmployeePerformanceStats();
         }
-        
-        // Set page title
-        $pageTitle = 'Dashboard';
-        
-        // Get current route
-        $route = isset($_GET['route']) ? $_GET['route'] : 'dashboard';
         
         // Include view
         include 'views/dashboard/index.php';

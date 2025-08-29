@@ -51,7 +51,7 @@ class CityController {
         requireAdmin();
         
         // Get all active states
-        $states = $this->stateModel->getAllActive();
+        $states = $this->stateModel->getActiveStates();
         
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -77,7 +77,8 @@ class CityController {
                 $data = [
                     'state_id' => $stateId,
                     'name' => $name,
-                    'status' => 1
+                    'status' => 1,
+                    'created_by' => $_SESSION['user_id']
                 ];
                 
                 $result = $this->cityModel->create($data);
@@ -129,7 +130,7 @@ class CityController {
         }
         
         // Get all active states
-        $states = $this->stateModel->getAllActive();
+        $states = $this->stateModel->getActiveStates();
         
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -154,7 +155,8 @@ class CityController {
             if (empty($errors)) {
                 $data = [
                     'state_id' => $stateId,
-                    'name' => $name
+                    'name' => $name,
+                    'updated_by' => $_SESSION['user_id']
                 ];
                 
                 $result = $this->cityModel->update($id, $data);
@@ -196,8 +198,8 @@ class CityController {
             exit;
         }
         
-        // Delete city
-        $result = $this->cityModel->delete($id);
+        // Delete city (hard delete to allow reusing the name)
+        $result = $this->cityModel->hardDelete($id);
         
         if ($result) {
             setFlashMessage('success', 'City deleted successfully');

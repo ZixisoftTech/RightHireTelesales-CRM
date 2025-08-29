@@ -36,6 +36,16 @@ class City extends Model {
     }
     
     /**
+     * Get cities by state ID
+     * 
+     * @param int $stateId State ID
+     * @return array Cities belonging to the state
+     */
+    public function getByStateId($stateId) {
+        return $this->getByState($stateId);
+    }
+    
+    /**
      * Get active cities by state
      */
     public function getActiveByState($stateId) {
@@ -73,6 +83,21 @@ class City extends Model {
                 ORDER BY c.name ASC";
         
         return $this->db->getRows($sql, [$userId, $stateId, $userId, $stateId]);
+    }
+    
+    /**
+     * Hard delete a city
+     * 
+     * This method completely removes a city from the database
+     * instead of just marking it as deleted.
+     * 
+     * @param int $id City ID
+     * @return bool Success or failure
+     */
+    public function hardDelete($id) {
+        $sql = "DELETE FROM {$this->table} WHERE id = ?";
+        $this->db->query($sql, [$id]);
+        return true;
     }
 }
 

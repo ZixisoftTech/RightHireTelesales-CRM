@@ -24,40 +24,64 @@ class UserController {
     }
     
     /**
-     * Users index page
+     * Index page
      */
     public function index() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get users with lead count
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
+        
+        // Get page number
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $users = $this->userModel->getAllWithLeadCount($page);
-        $totalUsers = $this->userModel->count();
-        $totalPages = ceil($totalUsers / RECORDS_PER_PAGE);
         
-        // Set page title
-        $pageTitle = 'Manage Users';
+        // Get users
+        $users = $this->userModel->getAllWithRoleName($page);
+        
+        // Get total count for pagination
+        $totalCount = $this->userModel->count();
+        $totalPages = ceil($totalCount / RECORDS_PER_PAGE);
         
         // Include view
         include 'views/users/index.php';
     }
     
     /**
-     * Create user page
+     * Create page
      */
     public function create() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
+        
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
+        
+        // Get roles
+        $roles = $this->userModel->getRoles();
         
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Sanitize input
             $name = sanitizeInput($_POST['name']);
             $email = sanitizeInput($_POST['email']);
-            $password = $_POST['password']; // Don't sanitize password
-            $confirmPassword = $_POST['confirm_password']; // Don't sanitize password
-            $role = sanitizeInput($_POST['role']);
+            $password = $_POST['password'];
+            $confirmPassword = $_POST['confirm_password'];
+            $roleId = (int)$_POST['role_id'];
             
             // Validate input
             $errors = [];
@@ -78,16 +102,12 @@ class UserController {
                 $errors[] = 'Password is required';
             } elseif (strlen($password) < 6) {
                 $errors[] = 'Password must be at least 6 characters';
-            }
-            
-            if ($password !== $confirmPassword) {
+            } elseif ($password !== $confirmPassword) {
                 $errors[] = 'Passwords do not match';
             }
             
-            if (empty($role)) {
+            if (empty($roleId)) {
                 $errors[] = 'Role is required';
-            } elseif (!in_array($role, ['administrator', 'employee'])) {
-                $errors[] = 'Invalid role';
             }
             
             // If no errors, create user
@@ -95,12 +115,13 @@ class UserController {
                 $data = [
                     'name' => $name,
                     'email' => $email,
-                    'password' => $password,
-                    'role' => $role,
-                    'status' => 1
+                    'password' => password_hash($password, PASSWORD_DEFAULT, ['cost' => PASSWORD_HASH_COST]),
+                    'role_id' => $roleId,
+                    'status' => 1,
+                    'created_by' => $_SESSION['user_id']
                 ];
                 
-                $result = $this->userModel->createUser($data);
+                $result = $this->userModel->create($data);
                 
                 if ($result) {
                     setFlashMessage('success', 'User created successfully');
@@ -110,35 +131,40 @@ class UserController {
                     $errors[] = 'Failed to create user';
                 }
             }
-            
-            // If we get here, there were errors
-            $pageTitle = 'Create User';
-            include 'views/users/create.php';
-        } else {
-            // Display create form
-            $pageTitle = 'Create User';
-            include 'views/users/create.php';
         }
+        
+        // Include view
+        include 'views/users/create.php';
     }
     
     /**
-     * Edit user page
+     * Edit page
      */
     public function edit() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get user ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
-        if (!$id) {
-            setFlashMessage('error', 'Invalid user ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'User ID is required');
             redirect('users');
             exit;
         }
         
+        $id = (int)$_GET['id'];
+        
         // Get user
-        $user = $this->userModel->find($id);
+        $user = $this->userModel->getById($id);
         
         if (!$user) {
             setFlashMessage('error', 'User not found');
@@ -146,14 +172,17 @@ class UserController {
             exit;
         }
         
+        // Get roles
+        $roles = $this->userModel->getRoles();
+        
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Sanitize input
             $name = sanitizeInput($_POST['name']);
             $email = sanitizeInput($_POST['email']);
-            $password = $_POST['password']; // Don't sanitize password
-            $confirmPassword = $_POST['confirm_password']; // Don't sanitize password
-            $role = sanitizeInput($_POST['role']);
+            $password = $_POST['password'];
+            $confirmPassword = $_POST['confirm_password'];
+            $roleId = (int)$_POST['role_id'];
             
             // Validate input
             $errors = [];
@@ -172,16 +201,12 @@ class UserController {
             
             if (!empty($password) && strlen($password) < 6) {
                 $errors[] = 'Password must be at least 6 characters';
-            }
-            
-            if (!empty($password) && $password !== $confirmPassword) {
+            } elseif (!empty($password) && $password !== $confirmPassword) {
                 $errors[] = 'Passwords do not match';
             }
             
-            if (empty($role)) {
+            if (empty($roleId)) {
                 $errors[] = 'Role is required';
-            } elseif (!in_array($role, ['administrator', 'employee'])) {
-                $errors[] = 'Invalid role';
             }
             
             // If no errors, update user
@@ -189,14 +214,16 @@ class UserController {
                 $data = [
                     'name' => $name,
                     'email' => $email,
-                    'role' => $role
+                    'role_id' => $roleId,
+                    'updated_by' => $_SESSION['user_id']
                 ];
                 
+                // Update password if provided
                 if (!empty($password)) {
-                    $data['password'] = $password;
+                    $data['password'] = password_hash($password, PASSWORD_DEFAULT, ['cost' => PASSWORD_HASH_COST]);
                 }
                 
-                $result = $this->userModel->updateUser($id, $data);
+                $result = $this->userModel->update($id, $data);
                 
                 if ($result) {
                     setFlashMessage('success', 'User updated successfully');
@@ -206,35 +233,40 @@ class UserController {
                     $errors[] = 'Failed to update user';
                 }
             }
-            
-            // If we get here, there were errors
-            $pageTitle = 'Edit User';
-            include 'views/users/edit.php';
-        } else {
-            // Display edit form
-            $pageTitle = 'Edit User';
-            include 'views/users/edit.php';
         }
+        
+        // Include view
+        include 'views/users/edit.php';
     }
     
     /**
      * Delete user
      */
     public function delete() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get user ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
-        if (!$id) {
-            setFlashMessage('error', 'Invalid user ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'User ID is required');
             redirect('users');
             exit;
         }
         
-        // Check if user is current user
-        if ($id === getCurrentUserId()) {
+        $id = (int)$_GET['id'];
+        
+        // Prevent deleting self
+        if ($id === (int)$_SESSION['user_id']) {
             setFlashMessage('error', 'You cannot delete your own account');
             redirect('users');
             exit;
@@ -257,20 +289,30 @@ class UserController {
      * Toggle user status
      */
     public function toggleStatus() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get user ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
-        if (!$id) {
-            setFlashMessage('error', 'Invalid user ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'User ID is required');
             redirect('users');
             exit;
         }
         
-        // Check if user is current user
-        if ($id === getCurrentUserId()) {
+        $id = (int)$_GET['id'];
+        
+        // Prevent toggling self
+        if ($id === (int)$_SESSION['user_id']) {
             setFlashMessage('error', 'You cannot change your own status');
             redirect('users');
             exit;
@@ -290,23 +332,33 @@ class UserController {
     }
     
     /**
-     * Manage territories page
+     * User territories page
      */
     public function territories() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get user ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
-        if (!$id) {
-            setFlashMessage('error', 'Invalid user ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'User ID is required');
             redirect('users');
             exit;
         }
         
+        $id = (int)$_GET['id'];
+        
         // Get user
-        $user = $this->userModel->find($id);
+        $user = $this->userModel->getById($id);
         
         if (!$user) {
             setFlashMessage('error', 'User not found');
@@ -314,14 +366,11 @@ class UserController {
             exit;
         }
         
+        // Get states
+        $states = $this->stateModel->getActiveStates();
+        
         // Get user territories
-        $territories = $this->userModel->getEmployeeTerritories($id);
-        
-        // Get all active states
-        $states = $this->stateModel->getAllActive();
-        
-        // Set page title
-        $pageTitle = 'Manage Territories';
+        $territories = $this->userModel->getTerritories($id);
         
         // Include view
         include 'views/users/territories.php';
@@ -331,15 +380,25 @@ class UserController {
      * Add territory
      */
     public function addTerritory() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
+        
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Sanitize input
             $userId = (int)$_POST['user_id'];
             $stateId = (int)$_POST['state_id'];
-            $cityId = isset($_POST['city_id']) && !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null;
+            $cityId = isset($_POST['city_id']) ? (int)$_POST['city_id'] : null;
             
             // Validate input
             $errors = [];
@@ -354,24 +413,21 @@ class UserController {
             
             // If no errors, add territory
             if (empty($errors)) {
-                $result = $this->userModel->addEmployeeTerritory($userId, $stateId, $cityId);
+                $result = $this->userModel->addTerritory($userId, $stateId, $cityId);
                 
                 if ($result) {
                     setFlashMessage('success', 'Territory added successfully');
                 } else {
                     setFlashMessage('error', 'Failed to add territory');
                 }
-                
-                redirect('users/territories?id=' . $userId);
-                exit;
+            } else {
+                setFlashMessage('error', implode('<br>', $errors));
             }
             
-            // If we get here, there were errors
-            setFlashMessage('error', implode('<br>', $errors));
             redirect('users/territories?id=' . $userId);
             exit;
         } else {
-            // Redirect to territories page
+            setFlashMessage('error', 'Invalid request');
             redirect('users');
             exit;
         }
@@ -381,21 +437,31 @@ class UserController {
      * Remove territory
      */
     public function removeTerritory() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get territory ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-        $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
-        if (!$id || !$userId) {
-            setFlashMessage('error', 'Invalid territory ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'Territory ID is required');
             redirect('users');
             exit;
         }
         
+        $id = (int)$_GET['id'];
+        $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+        
         // Remove territory
-        $result = $this->userModel->removeEmployeeTerritory($id);
+        $result = $this->userModel->removeTerritory($id);
         
         if ($result) {
             setFlashMessage('success', 'Territory removed successfully');
@@ -408,14 +474,19 @@ class UserController {
     }
     
     /**
-     * Profile page
+     * User profile page
      */
     public function profile() {
-        // Require login
-        requireLogin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get current user
-        $user = $this->userModel->find(getCurrentUserId());
+        $id = (int)$_SESSION['user_id'];
+        
+        // Get user
+        $user = $this->userModel->getById($id);
         
         if (!$user) {
             setFlashMessage('error', 'User not found');
@@ -428,9 +499,9 @@ class UserController {
             // Sanitize input
             $name = sanitizeInput($_POST['name']);
             $email = sanitizeInput($_POST['email']);
-            $currentPassword = $_POST['current_password']; // Don't sanitize password
-            $newPassword = $_POST['new_password']; // Don't sanitize password
-            $confirmPassword = $_POST['confirm_password']; // Don't sanitize password
+            $currentPassword = $_POST['current_password'];
+            $newPassword = $_POST['new_password'];
+            $confirmPassword = $_POST['confirm_password'];
             
             // Validate input
             $errors = [];
@@ -443,7 +514,7 @@ class UserController {
                 $errors[] = 'Email is required';
             } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $errors[] = 'Invalid email format';
-            } elseif ($this->userModel->emailExists($email, getCurrentUserId())) {
+            } elseif ($this->userModel->emailExists($email, $id)) {
                 $errors[] = 'Email already exists';
             }
             
@@ -459,10 +530,8 @@ class UserController {
                     $errors[] = 'New password is required';
                 } elseif (strlen($newPassword) < 6) {
                     $errors[] = 'New password must be at least 6 characters';
-                }
-                
-                if ($newPassword !== $confirmPassword) {
-                    $errors[] = 'Passwords do not match';
+                } elseif ($newPassword !== $confirmPassword) {
+                    $errors[] = 'New passwords do not match';
                 }
             }
             
@@ -470,14 +539,16 @@ class UserController {
             if (empty($errors)) {
                 $data = [
                     'name' => $name,
-                    'email' => $email
+                    'email' => $email,
+                    'updated_by' => $id
                 ];
                 
+                // Update password if provided
                 if (!empty($newPassword)) {
-                    $data['password'] = $newPassword;
+                    $data['password'] = password_hash($newPassword, PASSWORD_DEFAULT, ['cost' => PASSWORD_HASH_COST]);
                 }
                 
-                $result = $this->userModel->updateUser(getCurrentUserId(), $data);
+                $result = $this->userModel->update($id, $data);
                 
                 if ($result) {
                     // Update session
@@ -491,15 +562,10 @@ class UserController {
                     $errors[] = 'Failed to update profile';
                 }
             }
-            
-            // If we get here, there were errors
-            $pageTitle = 'My Profile';
-            include 'views/users/profile.php';
-        } else {
-            // Display profile form
-            $pageTitle = 'My Profile';
-            include 'views/users/profile.php';
         }
+        
+        // Include view
+        include 'views/users/profile.php';
     }
 }
 

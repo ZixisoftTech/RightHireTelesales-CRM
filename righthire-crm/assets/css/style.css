@@ -1,0 +1,383 @@
+/* Right Hire CRM Custom Styles */
+
+/* General Styles */
+body {
+    background-color: #f8f9fc;
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.container-fluid {
+    padding: 0 1.5rem;
+}
+
+/* Card Styles */
+.card {
+    margin-bottom: 24px;
+    border: none;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.card .card-header {
+    font-weight: 700;
+    padding: 0.75rem 1.25rem;
+}
+
+.card-header:first-child {
+    border-radius: calc(0.35rem - 1px) calc(0.35rem - 1px) 0 0;
+}
+
+/* Border Left Cards */
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+
+.border-left-danger {
+    border-left: 0.25rem solid #e74a3b !important;
+}
+
+/* Text Colors */
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+
+/* Navbar Styles */
+.navbar {
+    padding: 0.5rem 1rem;
+}
+
+.navbar-brand {
+    font-weight: 700;
+}
+
+/* DataTables Customization */
+.dataTables_wrapper .dataTables_filter input {
+    border: 1px solid #e3e6f0;
+    border-radius: 0.35rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    border: 1px solid #e3e6f0;
+    border-radius: 0.35rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    border-radius: 0.35rem;
+}
+
+/* Form Styles */
+.form-control:focus {
+    border-color: #bac8f3;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+/* Button Styles */
+.btn-icon-split {
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-icon-split .icon {
+    background: rgba(0, 0, 0, 0.15);
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+}
+
+.btn-icon-split .text {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+}
+
+/* Status Badge Styles */
+.badge {
+    font-size: 85%;
+    font-weight: 600;
+}
+
+/* Login Page */
+.login-page {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Footer */
+.footer {
+    position: relative;
+    bottom: 0;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 0 1rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Lead Status Colors */
+.status-new {
+    background-color: #4e73df;
+    color: white;
+}
+
+.status-follow_up {
+    background-color: #f6c23e;
+    color: white;
+}
+
+.status-not_attend {
+    background-color: #858796;
+    color: white;
+}
+
+.status-wrong_number {
+    background-color: #e74a3b;
+    color: white;
+}
+
+.status-other {
+    background-color: #5a5c69;
+    color: white;
+}
+
+.status-dead {
+    background-color: #e74a3b;
+    color: white;
+}
+
+.status-interested {
+    background-color: #36b9cc;
+    color: white;
+}
+
+.status-win {
+    background-color: #1cc88a;
+    color: white;
+}
+
+/* Call Log Timeline */
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #e9ecef;
+    left: 31px;
+    margin-left: -1.5px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.timeline-badge {
+    position: absolute;
+    top: 0;
+    left: 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    text-align: center;
+    font-size: 1.2em;
+    line-height: 30px;
+    margin-left: -15px;
+    color: #fff;
+    background-color: #4e73df;
+}
+
+.timeline-panel {
+    position: relative;
+    margin-left: 60px;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 0.35rem;
+    background-color: #fff;
+}
+
+.timeline-panel:before {
+    position: absolute;
+    top: 10px;
+    left: -15px;
+    display: inline-block;
+    border-top: 15px solid transparent;
+    border-right: 15px solid #e9ecef;
+    border-bottom: 15px solid transparent;
+    content: " ";
+}
+
+.timeline-panel:after {
+    position: absolute;
+    top: 11px;
+    left: -14px;
+    display: inline-block;
+    border-top: 14px solid transparent;
+    border-right: 14px solid #fff;
+    border-bottom: 14px solid transparent;
+    content: " ";
+}
+
+.timeline-title {
+    margin-top: 0;
+    color: inherit;
+}
+
+.timeline-body > p,
+.timeline-body > ul {
+    margin-bottom: 0;
+}
+
+.timeline-body > p + p {
+    margin-top: 5px;
+}
+
+/* Import/Export Styles */
+.import-preview {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.import-preview table {
+    font-size: 0.9rem;
+}
+
+.import-error {
+    background-color: #f8d7da;
+}
+
+/* Dashboard Cards */
+.dashboard-card {
+    transition: transform 0.3s;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+}
+
+/* Tooltip Customization */
+.tooltip-inner {
+    max-width: 200px;
+    padding: 0.25rem 0.5rem;
+    color: #fff;
+    text-align: center;
+    background-color: #000;
+    border-radius: 0.25rem;
+}
+
+/* Custom Switch */
+.custom-switch .custom-control-label::before {
+    width: 2rem;
+}
+
+.custom-switch .custom-control-label::after {
+    left: calc(-2.25rem + 2px);
+}
+
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: #1cc88a;
+    border-color: #1cc88a;
+}
+
+/* Pagination Customization */
+.pagination {
+    margin-bottom: 0;
+}
+
+.page-item.active .page-link {
+    background-color: #4e73df;
+    border-color: #4e73df;
+}
+
+.page-link {
+    color: #4e73df;
+}
+
+.page-link:hover {
+    color: #224abe;
+}
+
+/* Loading Spinner */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .container-fluid {
+        width: 100%;
+        padding: 0;
+    }
+    
+    .card {
+        border: 1px solid #ddd;
+        box-shadow: none;
+    }
+}
+

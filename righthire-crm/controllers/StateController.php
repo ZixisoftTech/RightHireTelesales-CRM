@@ -6,46 +6,67 @@
  */
 
 require_once 'models/State.php';
+require_once 'models/City.php';
 
 class StateController {
     private $stateModel;
+    private $cityModel;
     
     /**
      * Constructor
      */
     public function __construct() {
         $this->stateModel = new State();
+        $this->cityModel = new City();
     }
     
     /**
-     * States index page
+     * Index page
      */
     public function index() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
+        
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
+        
+        // Get page number
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         
         // Get states with city count
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $states = $this->stateModel->getAllWithCityCount($page);
-        $totalStates = $this->stateModel->count();
-        $totalPages = ceil($totalStates / RECORDS_PER_PAGE);
         
-        // Set page title
-        $pageTitle = 'Manage States';
-        
-        // Get current route
-        $route = isset($_GET['route']) ? $_GET['route'] : 'states';
+        // Get total count for pagination
+        $totalCount = $this->stateModel->count();
+        $totalPages = ceil($totalCount / RECORDS_PER_PAGE);
         
         // Include view
         include 'views/states/index.php';
     }
     
     /**
-     * Create state page
+     * Create page
      */
     public function create() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
+        
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -65,7 +86,8 @@ class StateController {
             if (empty($errors)) {
                 $data = [
                     'name' => $name,
-                    'status' => 1
+                    'status' => 1,
+                    'created_by' => $_SESSION['user_id']
                 ];
                 
                 $result = $this->stateModel->create($data);
@@ -78,37 +100,40 @@ class StateController {
                     $errors[] = 'Failed to create state';
                 }
             }
-            
-            // If we get here, there were errors
-            $pageTitle = 'Create State';
-            $route = 'states/create';
-            include 'views/states/create.php';
-        } else {
-            // Display create form
-            $pageTitle = 'Create State';
-            $route = 'states/create';
-            include 'views/states/create.php';
         }
+        
+        // Include view
+        include 'views/states/create.php';
     }
     
     /**
-     * Edit state page
+     * Edit page
      */
     public function edit() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get state ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
-        if (!$id) {
-            setFlashMessage('error', 'Invalid state ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'State ID is required');
             redirect('states');
             exit;
         }
         
+        $id = (int)$_GET['id'];
+        
         // Get state
-        $state = $this->stateModel->find($id);
+        $state = $this->stateModel->getById($id);
         
         if (!$state) {
             setFlashMessage('error', 'State not found');
@@ -133,7 +158,8 @@ class StateController {
             // If no errors, update state
             if (empty($errors)) {
                 $data = [
-                    'name' => $name
+                    'name' => $name,
+                    'updated_by' => $_SESSION['user_id']
                 ];
                 
                 $result = $this->stateModel->update($id, $data);
@@ -146,37 +172,49 @@ class StateController {
                     $errors[] = 'Failed to update state';
                 }
             }
-            
-            // If we get here, there were errors
-            $pageTitle = 'Edit State';
-            $route = 'states/edit';
-            include 'views/states/edit.php';
-        } else {
-            // Display edit form
-            $pageTitle = 'Edit State';
-            $route = 'states/edit';
-            include 'views/states/edit.php';
         }
+        
+        // Include view
+        include 'views/states/edit.php';
     }
     
     /**
      * Delete state
      */
     public function delete() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get state ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
-        if (!$id) {
-            setFlashMessage('error', 'Invalid state ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'State ID is required');
             redirect('states');
             exit;
         }
         
-        // Delete state
-        $result = $this->stateModel->delete($id);
+        $id = (int)$_GET['id'];
+        
+        // Check if state has cities
+        $cities = $this->cityModel->getByStateId($id);
+        
+        if (!empty($cities)) {
+            setFlashMessage('error', 'Cannot delete state with cities. Please delete cities first.');
+            redirect('states');
+            exit;
+        }
+        
+        // Delete state (hard delete to allow reusing the name)
+        $result = $this->stateModel->hardDelete($id);
         
         if ($result) {
             setFlashMessage('success', 'State deleted successfully');
@@ -192,23 +230,50 @@ class StateController {
      * Toggle state status
      */
     public function toggleStatus() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get state ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to access this page');
+            redirect('dashboard');
+            exit;
+        }
         
-        if (!$id) {
-            setFlashMessage('error', 'Invalid state ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'State ID is required');
+            redirect('states');
+            exit;
+        }
+        
+        $id = (int)$_GET['id'];
+        
+        // Get state
+        $state = $this->stateModel->getById($id);
+        
+        if (!$state) {
+            setFlashMessage('error', 'State not found');
             redirect('states');
             exit;
         }
         
         // Toggle status
-        $result = $this->stateModel->toggleStatus($id);
+        $newStatus = $state['status'] == 1 ? 0 : 1;
+        
+        $data = [
+            'status' => $newStatus,
+            'updated_by' => $_SESSION['user_id']
+        ];
+        
+        $result = $this->stateModel->update($id, $data);
         
         if ($result) {
-            setFlashMessage('success', 'State status updated successfully');
+            $statusText = $newStatus == 1 ? 'activated' : 'deactivated';
+            setFlashMessage('success', "State {$statusText} successfully");
         } else {
             setFlashMessage('error', 'Failed to update state status');
         }

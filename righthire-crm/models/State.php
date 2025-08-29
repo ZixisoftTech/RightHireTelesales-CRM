@@ -29,6 +29,16 @@ class State extends Model {
     }
     
     /**
+     * Get all active states
+     * 
+     * @return array Active states
+     */
+    public function getActiveStates() {
+        $sql = "SELECT * FROM {$this->table} WHERE status = 1 AND deleted_at IS NULL ORDER BY name ASC";
+        return $this->db->getRows($sql);
+    }
+    
+    /**
      * Check if state name exists
      */
     public function nameExists($name, $excludeId = null) {
@@ -54,6 +64,21 @@ class State extends Model {
                 ORDER BY s.name ASC";
         
         return $this->db->getRows($sql, [$userId]);
+    }
+    
+    /**
+     * Hard delete a state
+     * 
+     * This method completely removes a state from the database
+     * instead of just marking it as deleted.
+     * 
+     * @param int $id State ID
+     * @return bool Success or failure
+     */
+    public function hardDelete($id) {
+        $sql = "DELETE FROM {$this->table} WHERE id = ?";
+        $this->db->query($sql, [$id]);
+        return true;
     }
 }
 

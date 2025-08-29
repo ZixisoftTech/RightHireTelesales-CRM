@@ -83,6 +83,13 @@ class Database {
     }
     
     /**
+     * Get a single value (alias for getValue for compatibility)
+     */
+    public function getVar($sql, $params = []) {
+        return $this->getValue($sql, $params);
+    }
+    
+    /**
      * Insert a row
      */
     public function insert($table, $data) {

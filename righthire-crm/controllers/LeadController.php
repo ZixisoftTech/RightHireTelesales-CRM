@@ -30,90 +30,71 @@ class LeadController {
     }
     
     /**
-     * Leads index page
+     * Index page
      */
     public function index() {
-        // Require login
-        requireLogin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get filters from URL
+        // Get filter parameters
         $filters = [
-            'status' => isset($_GET['status']) ? sanitizeInput($_GET['status']) : '',
-            'state_id' => isset($_GET['state_id']) ? (int)$_GET['state_id'] : '',
-            'city_id' => isset($_GET['city_id']) ? (int)$_GET['city_id'] : '',
-            'assigned_to' => isset($_GET['assigned_to']) ? (int)$_GET['assigned_to'] : '',
-            'date_from' => isset($_GET['date_from']) ? sanitizeInput($_GET['date_from']) : '',
-            'date_to' => isset($_GET['date_to']) ? sanitizeInput($_GET['date_to']) : '',
-            'search' => isset($_GET['search']) ? sanitizeInput($_GET['search']) : ''
+            'state_id' => isset($_GET['state_id']) ? (int)$_GET['state_id'] : null,
+            'city_id' => isset($_GET['city_id']) ? (int)$_GET['city_id'] : null,
+            'status' => isset($_GET['status']) ? sanitizeInput($_GET['status']) : null,
+            'assigned_to' => isset($_GET['assigned_to']) ? (int)$_GET['assigned_to'] : null,
+            'date_from' => isset($_GET['date_from']) ? sanitizeInput($_GET['date_from']) : null,
+            'date_to' => isset($_GET['date_to']) ? sanitizeInput($_GET['date_to']) : null,
+            'search' => isset($_GET['search']) ? sanitizeInput($_GET['search']) : null
         ];
         
-        // Get page number
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        // Get leads based on user role and filters
+        $leads = $this->leadModel->getLeads($filters);
         
-        // Get leads with filters
-        $leads = $this->leadModel->getAllWithRelations($filters, $page);
-        $totalLeads = $this->leadModel->countFiltered($filters);
-        $totalPages = ceil($totalLeads / RECORDS_PER_PAGE);
+        // Get states for filter
+        $states = $this->stateModel->getActiveStates();
         
-        // Get all active states for filter
-        if (hasRole('administrator')) {
-            $states = $this->stateModel->getAllActive();
-        } else {
-            $states = $this->stateModel->getStatesForEmployee(getCurrentUserId());
-        }
-        
-        // Get cities for selected state
+        // Get cities if state is selected
         $cities = [];
         if (!empty($filters['state_id'])) {
-            if (hasRole('administrator')) {
-                $cities = $this->cityModel->getActiveByState($filters['state_id']);
-            } else {
-                $cities = $this->cityModel->getCitiesForEmployee(getCurrentUserId(), $filters['state_id']);
-            }
+            $cities = $this->cityModel->getCitiesByState($filters['state_id']);
         }
         
-        // Get all active employees for filter
+        // Get employees for filter (admin only)
+        $employees = [];
         if (hasRole('administrator')) {
-            $employees = $this->userModel->getAllActiveEmployees();
+            $employees = $this->userModel->getEmployees();
         }
-        
-        // Set page title
-        $pageTitle = 'Manage Leads';
-        
-        // Get current route
-        $route = isset($_GET['route']) ? $_GET['route'] : 'leads';
         
         // Include view
         include 'views/leads/index.php';
     }
     
     /**
-     * Create lead page
+     * Create page
      */
     public function create() {
-        // Require login
-        requireLogin();
-        
-        // Get all active states
-        if (hasRole('administrator')) {
-            $states = $this->stateModel->getAllActive();
-        } else {
-            $states = $this->stateModel->getStatesForEmployee(getCurrentUserId());
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
         }
         
-        // Get cities for selected state
+        // Get states
+        $states = $this->stateModel->getActiveStates();
+        
+        // Get cities if state is selected
         $cities = [];
         if (isset($_POST['state_id']) && !empty($_POST['state_id'])) {
-            if (hasRole('administrator')) {
-                $cities = $this->cityModel->getActiveByState($_POST['state_id']);
-            } else {
-                $cities = $this->cityModel->getCitiesForEmployee(getCurrentUserId(), $_POST['state_id']);
-            }
+            $cities = $this->cityModel->getCitiesByState($_POST['state_id']);
         }
         
-        // Get all active employees
+        // Get employees (admin only)
+        $employees = [];
         if (hasRole('administrator')) {
-            $employees = $this->userModel->getAllActiveEmployees();
+            $employees = $this->userModel->getEmployees();
         }
         
         // Check if form is submitted
@@ -123,10 +104,13 @@ class LeadController {
             $email = sanitizeInput($_POST['email']);
             $phone = sanitizeInput($_POST['phone']);
             $address = sanitizeInput($_POST['address']);
-            $stateId = (int)$_POST['state_id'];
-            $cityId = (int)$_POST['city_id'];
-            $assignedTo = isset($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
+            $state_id = (int)$_POST['state_id'];
+            $city_id = !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null;
+            $status = sanitizeInput($_POST['status']);
+            $other_reason = isset($_POST['other_reason']) ? sanitizeInput($_POST['other_reason']) : null;
+            $follow_up_date = isset($_POST['follow_up_date']) ? sanitizeInput($_POST['follow_up_date']) : null;
             $remarks = sanitizeInput($_POST['remarks']);
+            $assigned_to = isset($_POST['assigned_to']) && !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
             
             // Validate input
             $errors = [];
@@ -139,210 +123,105 @@ class LeadController {
                 $errors[] = 'Phone is required';
             }
             
-            if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errors[] = 'Invalid email format';
-            }
-            
-            if (empty($stateId)) {
+            if (empty($state_id)) {
                 $errors[] = 'State is required';
-            } elseif (!hasRole('administrator') && !$this->userModel->hasAccessToState(getCurrentUserId(), $stateId)) {
-                $errors[] = 'You do not have access to this state';
             }
             
-            if (empty($cityId)) {
-                $errors[] = 'City is required';
-            } elseif (!hasRole('administrator') && !$this->userModel->hasAccessToCity(getCurrentUserId(), $cityId)) {
-                $errors[] = 'You do not have access to this city';
+            if (empty($status)) {
+                $errors[] = 'Status is required';
+            }
+            
+            if ($status === 'follow_up' && empty($follow_up_date)) {
+                $errors[] = 'Follow-up date is required for follow-up status';
+            }
+            
+            if ($status === 'other' && empty($other_reason)) {
+                $errors[] = 'Other reason is required for other status';
             }
             
             // If no errors, create lead
             if (empty($errors)) {
-                $data = [
-                    'name' => $name,
-                    'email' => $email,
-                    'phone' => $phone,
-                    'address' => $address,
-                    'state_id' => $stateId,
-                    'city_id' => $cityId,
-                    'assigned_to' => $assignedTo,
-                    'remarks' => $remarks,
-                    'status' => 'new'
-                ];
-                
-                $result = $this->leadModel->create($data);
-                
-                if ($result) {
-                    setFlashMessage('success', 'Lead created successfully');
-                    redirect('leads');
-                    exit;
-                } else {
-                    $errors[] = 'Failed to create lead';
+                try {
+                    // Create lead
+                    $leadData = [
+                        'name' => $name,
+                        'email' => $email,
+                        'phone' => $phone,
+                        'address' => $address,
+                        'state_id' => $state_id,
+                        'city_id' => $city_id,
+                        'status' => $status,
+                        'other_reason' => $other_reason,
+                        'follow_up_date' => $follow_up_date,
+                        'remarks' => $remarks,
+                        'assigned_to' => $assigned_to
+                    ];
+                    
+                    $leadId = $this->leadModel->createLead($leadData);
+                    
+                    if ($leadId) {
+                        // Create call log
+                        $callLogData = [
+                            'lead_id' => $leadId,
+                            'status' => $status,
+                            'other_reason' => $other_reason,
+                            'follow_up_date' => $follow_up_date,
+                            'remarks' => $remarks
+                        ];
+                        
+                        $this->callLogModel->createCallLog($callLogData);
+                        
+                        setFlashMessage('success', 'Lead created successfully');
+                        redirect('leads');
+                        exit;
+                    } else {
+                        $errors[] = 'Failed to create lead';
+                    }
+                } catch (PDOException $e) {
+                    // Handle database errors
+                    if ($e->getCode() == '23000') {
+                        // Foreign key constraint error
+                        if (strpos($e->getMessage(), 'leads_assigned_to_fk') !== false) {
+                            $errors[] = 'The selected employee does not exist or has been deleted';
+                        } else if (strpos($e->getMessage(), 'leads_state_id_fk') !== false) {
+                            $errors[] = 'The selected state does not exist or has been deleted';
+                        } else if (strpos($e->getMessage(), 'leads_city_id_fk') !== false) {
+                            $errors[] = 'The selected city does not exist or has been deleted';
+                        } else {
+                            $errors[] = 'A database constraint error occurred: ' . $e->getMessage();
+                        }
+                    } else {
+                        $errors[] = 'Database error: ' . $e->getMessage();
+                    }
                 }
             }
-            
-            // If we get here, there were errors
-            $pageTitle = 'Create Lead';
-            $route = 'leads/create';
-            include 'views/leads/create.php';
-        } else {
-            // Display create form
-            $pageTitle = 'Create Lead';
-            $route = 'leads/create';
-            include 'views/leads/create.php';
         }
+        
+        // Include view
+        include 'views/leads/create.php';
     }
     
     /**
-     * Edit lead page
-     */
-    public function edit() {
-        // Require login
-        requireLogin();
-        
-        // Get lead ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-        
-        if (!$id) {
-            setFlashMessage('error', 'Invalid lead ID');
-            redirect('leads');
-            exit;
-        }
-        
-        // Get lead
-        $lead = $this->leadModel->getWithRelations($id);
-        
-        if (!$lead) {
-            setFlashMessage('error', 'Lead not found');
-            redirect('leads');
-            exit;
-        }
-        
-        // Check if user has access to this lead
-        if (!hasRole('administrator')) {
-            if (!$this->userModel->hasAccessToState(getCurrentUserId(), $lead['state_id']) ||
-                !$this->userModel->hasAccessToCity(getCurrentUserId(), $lead['city_id'])) {
-                setFlashMessage('error', 'You do not have access to this lead');
-                redirect('leads');
-                exit;
-            }
-        }
-        
-        // Get all active states
-        if (hasRole('administrator')) {
-            $states = $this->stateModel->getAllActive();
-        } else {
-            $states = $this->stateModel->getStatesForEmployee(getCurrentUserId());
-        }
-        
-        // Get cities for selected state
-        if (hasRole('administrator')) {
-            $cities = $this->cityModel->getActiveByState($lead['state_id']);
-        } else {
-            $cities = $this->cityModel->getCitiesForEmployee(getCurrentUserId(), $lead['state_id']);
-        }
-        
-        // Get all active employees
-        if (hasRole('administrator')) {
-            $employees = $this->userModel->getAllActiveEmployees();
-        }
-        
-        // Check if form is submitted
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Sanitize input
-            $name = sanitizeInput($_POST['name']);
-            $email = sanitizeInput($_POST['email']);
-            $phone = sanitizeInput($_POST['phone']);
-            $address = sanitizeInput($_POST['address']);
-            $stateId = (int)$_POST['state_id'];
-            $cityId = (int)$_POST['city_id'];
-            $assignedTo = isset($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
-            $remarks = sanitizeInput($_POST['remarks']);
-            
-            // Validate input
-            $errors = [];
-            
-            if (empty($name)) {
-                $errors[] = 'Name is required';
-            }
-            
-            if (empty($phone)) {
-                $errors[] = 'Phone is required';
-            }
-            
-            if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errors[] = 'Invalid email format';
-            }
-            
-            if (empty($stateId)) {
-                $errors[] = 'State is required';
-            } elseif (!hasRole('administrator') && !$this->userModel->hasAccessToState(getCurrentUserId(), $stateId)) {
-                $errors[] = 'You do not have access to this state';
-            }
-            
-            if (empty($cityId)) {
-                $errors[] = 'City is required';
-            } elseif (!hasRole('administrator') && !$this->userModel->hasAccessToCity(getCurrentUserId(), $cityId)) {
-                $errors[] = 'You do not have access to this city';
-            }
-            
-            // If no errors, update lead
-            if (empty($errors)) {
-                $data = [
-                    'name' => $name,
-                    'email' => $email,
-                    'phone' => $phone,
-                    'address' => $address,
-                    'state_id' => $stateId,
-                    'city_id' => $cityId,
-                    'remarks' => $remarks
-                ];
-                
-                // Only administrators can assign leads
-                if (hasRole('administrator')) {
-                    $data['assigned_to'] = $assignedTo;
-                }
-                
-                $result = $this->leadModel->update($id, $data);
-                
-                if ($result) {
-                    setFlashMessage('success', 'Lead updated successfully');
-                    redirect('leads');
-                    exit;
-                } else {
-                    $errors[] = 'Failed to update lead';
-                }
-            }
-            
-            // If we get here, there were errors
-            $pageTitle = 'Edit Lead';
-            $route = 'leads/edit';
-            include 'views/leads/edit.php';
-        } else {
-            // Display edit form
-            $pageTitle = 'Edit Lead';
-            $route = 'leads/edit';
-            include 'views/leads/edit.php';
-        }
-    }
-    
-    /**
-     * View lead page
+     * View page
      */
     public function view() {
-        // Require login
-        requireLogin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get lead ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-        
-        if (!$id) {
-            setFlashMessage('error', 'Invalid lead ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'Lead ID is required');
             redirect('leads');
             exit;
         }
         
+        $id = (int)$_GET['id'];
+        
         // Get lead
-        $lead = $this->leadModel->getWithRelations($id);
+        $lead = $this->leadModel->getLeadById($id);
         
         if (!$lead) {
             setFlashMessage('error', 'Lead not found');
@@ -351,9 +230,11 @@ class LeadController {
         }
         
         // Check if user has access to this lead
-        if (!hasRole('administrator')) {
-            if (!$this->userModel->hasAccessToState(getCurrentUserId(), $lead['state_id']) ||
-                !$this->userModel->hasAccessToCity(getCurrentUserId(), $lead['city_id'])) {
+        if (!hasRole('administrator') && $lead['assigned_to'] != $_SESSION['user_id']) {
+            // Check if lead is in user's territory
+            $hasAccess = $this->leadModel->checkLeadAccess($id, $_SESSION['user_id']);
+            
+            if (!$hasAccess) {
                 setFlashMessage('error', 'You do not have access to this lead');
                 redirect('leads');
                 exit;
@@ -361,36 +242,33 @@ class LeadController {
         }
         
         // Get call logs
-        $callLogs = $this->callLogModel->getByLeadId($id);
-        
-        // Set page title
-        $pageTitle = 'View Lead';
-        
-        // Get current route
-        $route = 'leads/view';
+        $callLogs = $this->callLogModel->getCallLogsByLeadId($id);
         
         // Include view
         include 'views/leads/view.php';
     }
     
     /**
-     * Delete lead
+     * Edit page
      */
-    public function delete() {
-        // Require login
-        requireLogin();
+    public function edit() {
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get lead ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-        
-        if (!$id) {
-            setFlashMessage('error', 'Invalid lead ID');
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'Lead ID is required');
             redirect('leads');
             exit;
         }
         
+        $id = (int)$_GET['id'];
+        
         // Get lead
-        $lead = $this->leadModel->find($id);
+        $lead = $this->leadModel->getLeadById($id);
         
         if (!$lead) {
             setFlashMessage('error', 'Lead not found');
@@ -399,17 +277,260 @@ class LeadController {
         }
         
         // Check if user has access to this lead
-        if (!hasRole('administrator')) {
-            if (!$this->userModel->hasAccessToState(getCurrentUserId(), $lead['state_id']) ||
-                !$this->userModel->hasAccessToCity(getCurrentUserId(), $lead['city_id'])) {
+        if (!hasRole('administrator') && $lead['assigned_to'] != $_SESSION['user_id']) {
+            // Check if lead is in user's territory
+            $hasAccess = $this->leadModel->checkLeadAccess($id, $_SESSION['user_id']);
+            
+            if (!$hasAccess) {
                 setFlashMessage('error', 'You do not have access to this lead');
                 redirect('leads');
                 exit;
             }
         }
         
+        // Get states
+        $states = $this->stateModel->getActiveStates();
+        
+        // Get cities for selected state
+        $cities = $this->cityModel->getCitiesByState($lead['state_id']);
+        
+        // Get employees (admin only)
+        $employees = [];
+        if (hasRole('administrator')) {
+            $employees = $this->userModel->getEmployees();
+        }
+        
+        // Check if form is submitted
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Sanitize input
+            $name = sanitizeInput($_POST['name']);
+            $email = sanitizeInput($_POST['email']);
+            $phone = sanitizeInput($_POST['phone']);
+            $address = sanitizeInput($_POST['address']);
+            $state_id = (int)$_POST['state_id'];
+            $city_id = !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null;
+            $status = sanitizeInput($_POST['status']);
+            $other_reason = isset($_POST['other_reason']) ? sanitizeInput($_POST['other_reason']) : null;
+            $follow_up_date = isset($_POST['follow_up_date']) ? sanitizeInput($_POST['follow_up_date']) : null;
+            $remarks = sanitizeInput($_POST['remarks']);
+            $assigned_to = isset($_POST['assigned_to']) && !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
+            
+            // Validate input
+            $errors = [];
+            
+            if (empty($name)) {
+                $errors[] = 'Name is required';
+            }
+            
+            if (empty($phone)) {
+                $errors[] = 'Phone is required';
+            }
+            
+            if (empty($state_id)) {
+                $errors[] = 'State is required';
+            }
+            
+            // If no errors, update lead
+            if (empty($errors)) {
+                try {
+                    // Update lead
+                    $leadData = [
+                        'name' => $name,
+                        'email' => $email,
+                        'phone' => $phone,
+                        'address' => $address,
+                        'state_id' => $state_id,
+                        'city_id' => $city_id,
+                        'remarks' => $remarks
+                    ];
+                    
+                    // Only admin can update assigned_to
+                    if (hasRole('administrator')) {
+                        $leadData['assigned_to'] = $assigned_to;
+                    }
+                    
+                    $result = $this->leadModel->updateLead($id, $leadData);
+                    
+                    if ($result) {
+                        setFlashMessage('success', 'Lead updated successfully');
+                        redirect('leads/view?id=' . $id);
+                        exit;
+                    } else {
+                        $errors[] = 'Failed to update lead';
+                    }
+                } catch (PDOException $e) {
+                    // Handle database errors
+                    if ($e->getCode() == '23000') {
+                        // Foreign key constraint error
+                        if (strpos($e->getMessage(), 'leads_assigned_to_fk') !== false) {
+                            $errors[] = 'The selected employee does not exist or has been deleted';
+                        } else if (strpos($e->getMessage(), 'leads_state_id_fk') !== false) {
+                            $errors[] = 'The selected state does not exist or has been deleted';
+                        } else if (strpos($e->getMessage(), 'leads_city_id_fk') !== false) {
+                            $errors[] = 'The selected city does not exist or has been deleted';
+                        } else {
+                            $errors[] = 'A database constraint error occurred: ' . $e->getMessage();
+                        }
+                    } else {
+                        $errors[] = 'Database error: ' . $e->getMessage();
+                    }
+                }
+            }
+            
+            // If there are errors, get cities for the selected state
+            if (!empty($errors) && !empty($state_id)) {
+                $cities = $this->cityModel->getCitiesByState($state_id);
+            }
+        }
+        
+        // Include view
+        include 'views/leads/edit.php';
+    }
+    
+    /**
+     * Update status page
+     */
+    public function updateStatus() {
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
+        
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'Lead ID is required');
+            redirect('leads');
+            exit;
+        }
+        
+        $id = (int)$_GET['id'];
+        
+        // Get lead
+        $lead = $this->leadModel->getLeadById($id);
+        
+        if (!$lead) {
+            setFlashMessage('error', 'Lead not found');
+            redirect('leads');
+            exit;
+        }
+        
+        // Check if user has access to this lead
+        if (!hasRole('administrator') && $lead['assigned_to'] != $_SESSION['user_id']) {
+            // Check if lead is in user's territory
+            $hasAccess = $this->leadModel->checkLeadAccess($id, $_SESSION['user_id']);
+            
+            if (!$hasAccess) {
+                setFlashMessage('error', 'You do not have access to this lead');
+                redirect('leads');
+                exit;
+            }
+        }
+        
+        // Check if form is submitted
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Sanitize input
+            $status = sanitizeInput($_POST['status']);
+            $other_reason = isset($_POST['other_reason']) ? sanitizeInput($_POST['other_reason']) : null;
+            $follow_up_date = isset($_POST['follow_up_date']) ? sanitizeInput($_POST['follow_up_date']) : null;
+            $remarks = sanitizeInput($_POST['remarks']);
+            
+            // Validate input
+            $errors = [];
+            
+            if (empty($status)) {
+                $errors[] = 'Status is required';
+            }
+            
+            if ($status === 'follow_up' && empty($follow_up_date)) {
+                $errors[] = 'Follow-up date is required for follow-up status';
+            }
+            
+            if ($status === 'other' && empty($other_reason)) {
+                $errors[] = 'Other reason is required for other status';
+            }
+            
+            // If no errors, update lead status
+            if (empty($errors)) {
+                try {
+                    // Start transaction
+                    $db = Database::getInstance();
+                    $db->beginTransaction();
+                    
+                    // Update lead status
+                    $leadData = [
+                        'status' => $status,
+                        'other_reason' => $other_reason,
+                        'follow_up_date' => $follow_up_date
+                    ];
+                    
+                    $result = $this->leadModel->updateLead($id, $leadData);
+                    
+                    if ($result) {
+                        // Create call log
+                        $callLogData = [
+                            'lead_id' => $id,
+                            'status' => $status,
+                            'other_reason' => $other_reason,
+                            'follow_up_date' => $follow_up_date,
+                            'remarks' => $remarks
+                        ];
+                        
+                        $this->callLogModel->createCallLog($callLogData);
+                        
+                        // Commit transaction
+                        $db->commit();
+                        
+                        setFlashMessage('success', 'Lead status updated successfully');
+                        redirect('leads/view?id=' . $id);
+                        exit;
+                    } else {
+                        // Rollback transaction
+                        $db->rollBack();
+                        
+                        $errors[] = 'Failed to update lead status';
+                    }
+                } catch (Exception $e) {
+                    // Rollback transaction
+                    $db->rollBack();
+                    
+                    $errors[] = 'Error: ' . $e->getMessage();
+                }
+            }
+        }
+        
+        // Include view
+        include 'views/leads/update_status.php';
+    }
+    
+    /**
+     * Delete lead
+     */
+    public function delete() {
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
+        
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to delete leads');
+            redirect('leads');
+            exit;
+        }
+        
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'Lead ID is required');
+            redirect('leads');
+            exit;
+        }
+        
+        $id = (int)$_GET['id'];
+        
         // Delete lead
-        $result = $this->leadModel->delete($id);
+        $result = $this->leadModel->deleteLead($id);
         
         if ($result) {
             setFlashMessage('success', 'Lead deleted successfully');
@@ -422,266 +543,244 @@ class LeadController {
     }
     
     /**
-     * Update lead status page
-     */
-    public function updateStatus() {
-        // Require login
-        requireLogin();
-        
-        // Get lead ID from URL
-        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-        
-        if (!$id) {
-            setFlashMessage('error', 'Invalid lead ID');
-            redirect('leads');
-            exit;
-        }
-        
-        // Get lead
-        $lead = $this->leadModel->getWithRelations($id);
-        
-        if (!$lead) {
-            setFlashMessage('error', 'Lead not found');
-            redirect('leads');
-            exit;
-        }
-        
-        // Check if user has access to this lead
-        if (!hasRole('administrator')) {
-            if (!$this->userModel->hasAccessToState(getCurrentUserId(), $lead['state_id']) ||
-                !$this->userModel->hasAccessToCity(getCurrentUserId(), $lead['city_id'])) {
-                setFlashMessage('error', 'You do not have access to this lead');
-                redirect('leads');
-                exit;
-            }
-        }
-        
-        // Check if form is submitted
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Sanitize input
-            $status = sanitizeInput($_POST['status']);
-            $otherReason = isset($_POST['other_reason']) ? sanitizeInput($_POST['other_reason']) : null;
-            $followUpDate = isset($_POST['follow_up_date']) ? sanitizeInput($_POST['follow_up_date']) : null;
-            $remarks = sanitizeInput($_POST['remarks']);
-            
-            // Validate input
-            $errors = [];
-            
-            if (empty($status)) {
-                $errors[] = 'Status is required';
-            }
-            
-            if ($status === 'other' && empty($otherReason)) {
-                $errors[] = 'Other reason is required';
-            }
-            
-            if ($status === 'follow_up' && empty($followUpDate)) {
-                $errors[] = 'Follow-up date is required';
-            }
-            
-            // If no errors, update lead status
-            if (empty($errors)) {
-                $result = $this->leadModel->updateStatus($id, $status, $otherReason, $followUpDate, $remarks);
-                
-                if ($result) {
-                    setFlashMessage('success', 'Lead status updated successfully');
-                    redirect('leads/view?id=' . $id);
-                    exit;
-                } else {
-                    $errors[] = 'Failed to update lead status';
-                }
-            }
-            
-            // If we get here, there were errors
-            $pageTitle = 'Update Lead Status';
-            $route = 'leads/update-status';
-            include 'views/leads/update_status.php';
-        } else {
-            // Display update status form
-            $pageTitle = 'Update Lead Status';
-            $route = 'leads/update-status';
-            include 'views/leads/update_status.php';
-        }
-    }
-    
-    /**
-     * Import leads page
+     * Import page
      */
     public function import() {
-        // Require admin
-        requireAdmin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
+        
+        // Check if user is admin
+        if (!hasRole('administrator')) {
+            setFlashMessage('error', 'You do not have permission to import leads');
+            redirect('leads');
+            exit;
+        }
+        
+        // Get states
+        $states = $this->stateModel->getActiveStates();
+        
+        // Get cities if state is selected
+        $cities = [];
+        if (isset($_POST['state_id']) && !empty($_POST['state_id'])) {
+            $cities = $this->cityModel->getCitiesByState($_POST['state_id']);
+        }
+        
+        // Get employees
+        $employees = $this->userModel->getEmployees();
         
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Check if file is uploaded
             if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
-                setFlashMessage('error', 'Please select a CSV file to upload');
+                setFlashMessage('error', 'Please select a CSV file to import');
                 redirect('leads/import');
                 exit;
             }
             
-            // Check file size
-            if ($_FILES['csv_file']['size'] > MAX_UPLOAD_SIZE) {
-                setFlashMessage('error', 'File size exceeds the maximum limit of ' . (MAX_UPLOAD_SIZE / 1024 / 1024) . 'MB');
+            // Get state and city IDs
+            $state_id = isset($_POST['state_id']) ? (int)$_POST['state_id'] : null;
+            $city_id = isset($_POST['city_id']) && !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null;
+            $assigned_to = isset($_POST['assigned_to']) && !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
+            
+            // Validate state
+            if (empty($state_id)) {
+                setFlashMessage('error', 'Please select a state');
                 redirect('leads/import');
                 exit;
             }
             
-            // Check file extension
-            $fileExtension = strtolower(pathinfo($_FILES['csv_file']['name'], PATHINFO_EXTENSION));
-            if ($fileExtension !== 'csv') {
-                setFlashMessage('error', 'Only CSV files are allowed');
-                redirect('leads/import');
-                exit;
-            }
+            // Process CSV file
+            $file = $_FILES['csv_file']['tmp_name'];
+            $handle = fopen($file, 'r');
             
-            // Read CSV file
-            $file = fopen($_FILES['csv_file']['tmp_name'], 'r');
-            $headers = fgetcsv($file);
-            $data = [];
-            
-            // Get column mapping
-            $mapping = $_POST['mapping'];
-            
-            // Validate mapping
-            $requiredFields = ['name', 'phone', 'state_id', 'city_id'];
-            foreach ($requiredFields as $field) {
-                if (!isset($mapping[$field]) || $mapping[$field] === '') {
-                    setFlashMessage('error', 'Mapping for ' . $field . ' is required');
+            if ($handle !== false) {
+                // Get header row
+                $header = fgetcsv($handle);
+                
+                // Check required columns
+                $requiredColumns = ['name', 'phone'];
+                $missingColumns = [];
+                
+                foreach ($requiredColumns as $column) {
+                    if (!in_array($column, $header)) {
+                        $missingColumns[] = $column;
+                    }
+                }
+                
+                if (!empty($missingColumns)) {
+                    setFlashMessage('error', 'Missing required columns: ' . implode(', ', $missingColumns));
                     redirect('leads/import');
                     exit;
                 }
-            }
-            
-            // Process CSV data
-            $rowCount = 0;
-            $errors = [];
-            
-            while (($row = fgetcsv($file)) !== false) {
-                $rowCount++;
                 
-                // Skip empty rows
-                if (count(array_filter($row)) === 0) {
-                    continue;
+                // Process data rows
+                $importCount = 0;
+                $errorCount = 0;
+                $errors = [];
+                
+                try {
+                    // Start transaction
+                    $db = Database::getInstance();
+                    $db->beginTransaction();
+                    
+                    while (($data = fgetcsv($handle)) !== false) {
+                        // Map data to columns
+                        $rowData = [];
+                        foreach ($header as $index => $column) {
+                            $rowData[$column] = isset($data[$index]) ? $data[$index] : '';
+                        }
+                        
+                        // Validate required fields
+                        if (empty($rowData['name']) || empty($rowData['phone'])) {
+                            $errorCount++;
+                            continue;
+                        }
+                        
+                        // Prepare lead data
+                        $leadData = [
+                            'name' => $rowData['name'],
+                            'email' => isset($rowData['email']) ? $rowData['email'] : null,
+                            'phone' => $rowData['phone'],
+                            'address' => isset($rowData['address']) ? $rowData['address'] : null,
+                            'state_id' => $state_id,
+                            'city_id' => $city_id,
+                            'status' => 'new',
+                            'assigned_to' => $assigned_to
+                        ];
+                        
+                        // Create lead
+                        $leadId = $this->leadModel->createLead($leadData);
+                        
+                        if ($leadId) {
+                            // Create call log
+                            $callLogData = [
+                                'lead_id' => $leadId,
+                                'status' => 'new',
+                                'remarks' => 'Imported from CSV'
+                            ];
+                            
+                            $this->callLogModel->createCallLog($callLogData);
+                            
+                            $importCount++;
+                        } else {
+                            $errorCount++;
+                        }
+                    }
+                    
+                    // Commit transaction
+                    $db->commit();
+                    
+                    fclose($handle);
+                    
+                    if ($importCount > 0) {
+                        setFlashMessage('success', $importCount . ' leads imported successfully' . ($errorCount > 0 ? ' (' . $errorCount . ' errors)' : ''));
+                        redirect('leads');
+                        exit;
+                    } else {
+                        setFlashMessage('error', 'No leads imported' . ($errorCount > 0 ? ' (' . $errorCount . ' errors)' : ''));
+                        redirect('leads/import');
+                        exit;
+                    }
+                } catch (Exception $e) {
+                    // Rollback transaction
+                    $db->rollBack();
+                    
+                    setFlashMessage('error', 'Error importing leads: ' . $e->getMessage());
+                    redirect('leads/import');
+                    exit;
                 }
-                
-                // Map columns
-                $leadData = [
-                    'name' => isset($row[$mapping['name']]) ? $row[$mapping['name']] : '',
-                    'email' => isset($mapping['email']) && isset($row[$mapping['email']]) ? $row[$mapping['email']] : '',
-                    'phone' => isset($row[$mapping['phone']]) ? $row[$mapping['phone']] : '',
-                    'address' => isset($mapping['address']) && isset($row[$mapping['address']]) ? $row[$mapping['address']] : '',
-                    'state_id' => isset($row[$mapping['state_id']]) ? (int)$row[$mapping['state_id']] : 0,
-                    'city_id' => isset($row[$mapping['city_id']]) ? (int)$row[$mapping['city_id']] : 0,
-                    'remarks' => isset($mapping['remarks']) && isset($row[$mapping['remarks']]) ? $row[$mapping['remarks']] : ''
-                ];
-                
-                // Validate data
-                if (empty($leadData['name'])) {
-                    $errors[] = 'Row ' . $rowCount . ': Name is required';
-                    continue;
-                }
-                
-                if (empty($leadData['phone'])) {
-                    $errors[] = 'Row ' . $rowCount . ': Phone is required';
-                    continue;
-                }
-                
-                if (empty($leadData['state_id'])) {
-                    $errors[] = 'Row ' . $rowCount . ': State ID is required';
-                    continue;
-                }
-                
-                if (empty($leadData['city_id'])) {
-                    $errors[] = 'Row ' . $rowCount . ': City ID is required';
-                    continue;
-                }
-                
-                // Check if state exists
-                $state = $this->stateModel->find($leadData['state_id']);
-                if (!$state) {
-                    $errors[] = 'Row ' . $rowCount . ': State ID ' . $leadData['state_id'] . ' does not exist';
-                    continue;
-                }
-                
-                // Check if city exists
-                $city = $this->cityModel->find($leadData['city_id']);
-                if (!$city) {
-                    $errors[] = 'Row ' . $rowCount . ': City ID ' . $leadData['city_id'] . ' does not exist';
-                    continue;
-                }
-                
-                // Check if city belongs to state
-                if ($city['state_id'] != $leadData['state_id']) {
-                    $errors[] = 'Row ' . $rowCount . ': City ID ' . $leadData['city_id'] . ' does not belong to State ID ' . $leadData['state_id'];
-                    continue;
-                }
-                
-                // Add to data array
-                $data[] = $leadData;
-            }
-            
-            fclose($file);
-            
-            // Check if there are any errors
-            if (!empty($errors)) {
-                setFlashMessage('error', implode('<br>', $errors));
+            } else {
+                setFlashMessage('error', 'Failed to open CSV file');
                 redirect('leads/import');
                 exit;
             }
-            
-            // Check if there is any data
-            if (empty($data)) {
-                setFlashMessage('error', 'No valid data found in the CSV file');
-                redirect('leads/import');
-                exit;
-            }
-            
-            // Import leads
-            try {
-                $count = $this->leadModel->importFromCSV($data);
-                setFlashMessage('success', $count . ' leads imported successfully');
-                redirect('leads');
-                exit;
-            } catch (Exception $e) {
-                setFlashMessage('error', 'Failed to import leads: ' . $e->getMessage());
-                redirect('leads/import');
-                exit;
-            }
-        } else {
-            // Display import form
-            $pageTitle = 'Import Leads';
-            $route = 'leads/import';
-            include 'views/leads/import.php';
         }
+        
+        // Include view
+        include 'views/leads/import.php';
     }
     
     /**
      * Export leads
      */
     public function export() {
-        // Require login
-        requireLogin();
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
         
-        // Get filters from URL
+        // Get filter parameters
         $filters = [
-            'status' => isset($_GET['status']) ? sanitizeInput($_GET['status']) : '',
-            'state_id' => isset($_GET['state_id']) ? (int)$_GET['state_id'] : '',
-            'city_id' => isset($_GET['city_id']) ? (int)$_GET['city_id'] : '',
-            'assigned_to' => isset($_GET['assigned_to']) ? (int)$_GET['assigned_to'] : '',
-            'date_from' => isset($_GET['date_from']) ? sanitizeInput($_GET['date_from']) : '',
-            'date_to' => isset($_GET['date_to']) ? sanitizeInput($_GET['date_to']) : '',
-            'search' => isset($_GET['search']) ? sanitizeInput($_GET['search']) : ''
+            'state_id' => isset($_GET['state_id']) ? (int)$_GET['state_id'] : null,
+            'city_id' => isset($_GET['city_id']) ? (int)$_GET['city_id'] : null,
+            'status' => isset($_GET['status']) ? sanitizeInput($_GET['status']) : null,
+            'assigned_to' => isset($_GET['assigned_to']) ? (int)$_GET['assigned_to'] : null,
+            'date_from' => isset($_GET['date_from']) ? sanitizeInput($_GET['date_from']) : null,
+            'date_to' => isset($_GET['date_to']) ? sanitizeInput($_GET['date_to']) : null,
+            'search' => isset($_GET['search']) ? sanitizeInput($_GET['search']) : null
         ];
         
-        // Export leads to CSV
-        $result = $this->leadModel->exportToCSV($filters);
+        // Get leads based on user role and filters
+        $leads = $this->leadModel->getLeads($filters, false);
         
-        // Set filename
-        $filename = 'leads_export_' . date('Y-m-d_H-i-s') . '.csv';
+        if (empty($leads)) {
+            setFlashMessage('error', 'No leads found to export');
+            redirect('leads');
+            exit;
+        }
         
-        // Export to CSV
-        exportToCSV($result['data'], $result['headers'], $filename);
+        // Set headers for CSV download
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="leads_export_' . date('Y-m-d') . '.csv"');
+        
+        // Create output stream
+        $output = fopen('php://output', 'w');
+        
+        // Add UTF-8 BOM
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        // Add header row
+        fputcsv($output, [
+            'ID',
+            'Name',
+            'Email',
+            'Phone',
+            'Address',
+            'State',
+            'City',
+            'Status',
+            'Other Reason',
+            'Follow-up Date',
+            'Assigned To',
+            'Created At',
+            'Updated At'
+        ]);
+        
+        // Add data rows
+        foreach ($leads as $lead) {
+            fputcsv($output, [
+                $lead['id'],
+                $lead['name'],
+                $lead['email'],
+                $lead['phone'],
+                $lead['address'],
+                $lead['state_name'],
+                $lead['city_name'],
+                $lead['status'],
+                $lead['other_reason'],
+                $lead['follow_up_date'],
+                $lead['assigned_to_name'],
+                $lead['created_at'],
+                $lead['updated_at']
+            ]);
+        }
+        
+        fclose($output);
+        exit;
     }
 }
 

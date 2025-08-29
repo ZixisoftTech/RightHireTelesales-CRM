@@ -5,430 +5,560 @@
  * This model handles all lead-related database operations.
  */
 
-require_once 'Model.php';
+require_once 'models/Model.php';
 
 class Lead extends Model {
-    protected $table = 'leads';
-    protected $fillable = [
-        'name', 'email', 'phone', 'address', 'state_id', 'city_id',
-        'status', 'other_reason', 'follow_up_date', 'remarks', 'assigned_to',
-        'created_by', 'updated_by'
-    ];
-    
     /**
-     * Get all leads with related data
+     * Get leads based on filters and user role
+     * 
+     * @param array $filters Filter parameters
+     * @param bool $paginate Whether to paginate results
+     * @param int $page Current page number
+     * @param int $perPage Items per page
+     * @return array Leads
      */
-    public function getAllWithRelations($filters = [], $page = 1, $limit = RECORDS_PER_PAGE) {
-        $offset = ($page - 1) * $limit;
-        $where = "l.deleted_at IS NULL";
+    public function getLeads($filters = [], $paginate = true, $page = 1, $perPage = 20) {
+        $db = Database::getInstance();
+        
+        // Base query
+        $sql = "SELECT l.*, 
+                s.name AS state_name, 
+                c.name AS city_name, 
+                u.name AS assigned_to_name 
+                FROM leads l 
+                LEFT JOIN states s ON l.state_id = s.id 
+                LEFT JOIN cities c ON l.city_id = c.id 
+                LEFT JOIN users u ON l.assigned_to = u.id 
+                WHERE l.deleted_at IS NULL";
+        
         $params = [];
         
         // Apply filters
-        if (!empty($filters['status'])) {
-            $where .= " AND l.status = ?";
-            $params[] = $filters['status'];
-        }
-        
         if (!empty($filters['state_id'])) {
-            $where .= " AND l.state_id = ?";
+            $sql .= " AND l.state_id = ?";
             $params[] = $filters['state_id'];
         }
         
         if (!empty($filters['city_id'])) {
-            $where .= " AND l.city_id = ?";
+            $sql .= " AND l.city_id = ?";
             $params[] = $filters['city_id'];
         }
         
-        if (!empty($filters['assigned_to'])) {
-            $where .= " AND l.assigned_to = ?";
-            $params[] = $filters['assigned_to'];
-        }
-        
-        if (!empty($filters['date_from'])) {
-            $where .= " AND DATE(l.created_at) >= ?";
-            $params[] = $filters['date_from'];
-        }
-        
-        if (!empty($filters['date_to'])) {
-            $where .= " AND DATE(l.created_at) <= ?";
-            $params[] = $filters['date_to'];
-        }
-        
-        if (!empty($filters['search'])) {
-            $search = '%' . $filters['search'] . '%';
-            $where .= " AND (l.name LIKE ? OR l.email LIKE ? OR l.phone LIKE ?)";
-            $params[] = $search;
-            $params[] = $search;
-            $params[] = $search;
-        }
-        
-        // Apply territory restrictions for employees
-        if (!hasRole('administrator')) {
-            $userId = getCurrentUserId();
-            $where .= " AND (
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id IS NULL AND et.deleted_at IS NULL
-                )
-                OR
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id = l.city_id AND et.deleted_at IS NULL
-                )
-            )";
-            $params[] = $userId;
-            $params[] = $userId;
-        }
-        
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS assigned_to_name, cu.name AS created_by
-                FROM {$this->table} l
-                JOIN states s ON l.state_id = s.id
-                JOIN cities c ON l.city_id = c.id
-                LEFT JOIN users u ON l.assigned_to = u.id
-                LEFT JOIN users cu ON l.created_by = cu.id
-                WHERE {$where}
-                ORDER BY l.id DESC
-                LIMIT ?, ?";
-        
-        $params[] = $offset;
-        $params[] = $limit;
-        
-        return $this->db->getRows($sql, $params);
-    }
-    
-    /**
-     * Count filtered leads
-     */
-    public function countFiltered($filters = []) {
-        $where = "deleted_at IS NULL";
-        $params = [];
-        
-        // Apply filters
         if (!empty($filters['status'])) {
-            $where .= " AND status = ?";
+            $sql .= " AND l.status = ?";
             $params[] = $filters['status'];
         }
         
-        if (!empty($filters['state_id'])) {
-            $where .= " AND state_id = ?";
-            $params[] = $filters['state_id'];
-        }
-        
-        if (!empty($filters['city_id'])) {
-            $where .= " AND city_id = ?";
-            $params[] = $filters['city_id'];
-        }
-        
         if (!empty($filters['assigned_to'])) {
-            $where .= " AND assigned_to = ?";
+            $sql .= " AND l.assigned_to = ?";
             $params[] = $filters['assigned_to'];
         }
         
         if (!empty($filters['date_from'])) {
-            $where .= " AND DATE(created_at) >= ?";
+            $sql .= " AND DATE(l.created_at) >= ?";
             $params[] = $filters['date_from'];
         }
         
         if (!empty($filters['date_to'])) {
-            $where .= " AND DATE(created_at) <= ?";
+            $sql .= " AND DATE(l.created_at) <= ?";
             $params[] = $filters['date_to'];
         }
         
         if (!empty($filters['search'])) {
-            $search = '%' . $filters['search'] . '%';
-            $where .= " AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)";
-            $params[] = $search;
-            $params[] = $search;
-            $params[] = $search;
+            $sql .= " AND (l.name LIKE ? OR l.email LIKE ? OR l.phone LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
         }
         
-        // Apply territory restrictions for employees
+        // Apply user role restrictions
         if (!hasRole('administrator')) {
-            $userId = getCurrentUserId();
-            $where .= " AND (
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = state_id AND et.city_id IS NULL AND et.deleted_at IS NULL
-                )
-                OR
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = state_id AND et.city_id = city_id AND et.deleted_at IS NULL
-                )
-            )";
-            $params[] = $userId;
-            $params[] = $userId;
+            $userId = $_SESSION['user_id'];
+            
+            // Get user's territories
+            $territorySql = "SELECT state_id, city_id FROM employee_territories WHERE user_id = ? AND deleted_at IS NULL";
+            $territories = $db->getRows($territorySql, [$userId]);
+            
+            if (!empty($territories)) {
+                $territoryConditions = [];
+                
+                foreach ($territories as $territory) {
+                    if (empty($territory['city_id'])) {
+                        // User has access to entire state
+                        $territoryConditions[] = "(l.state_id = ?)";
+                        $params[] = $territory['state_id'];
+                    } else {
+                        // User has access to specific city
+                        $territoryConditions[] = "(l.state_id = ? AND l.city_id = ?)";
+                        $params[] = $territory['state_id'];
+                        $params[] = $territory['city_id'];
+                    }
+                }
+                
+                // Add assigned leads
+                $territoryConditions[] = "l.assigned_to = ?";
+                $params[] = $userId;
+                
+                $sql .= " AND (" . implode(" OR ", $territoryConditions) . ")";
+            } else {
+                // User has no territories, only show assigned leads
+                $sql .= " AND l.assigned_to = ?";
+                $params[] = $userId;
+            }
         }
         
-        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE {$where}";
+        // Order by
+        $sql .= " ORDER BY l.created_at DESC";
         
-        return $this->db->getValue($sql, $params);
+        // Pagination
+        if ($paginate) {
+            // Get total count
+            $countSql = "SELECT COUNT(*) FROM (" . $sql . ") AS count_query";
+            $totalCount = $db->getVar($countSql, $params);
+            
+            // Calculate pagination
+            $totalPages = ceil($totalCount / $perPage);
+            $offset = ($page - 1) * $perPage;
+            
+            // Add limit
+            $sql .= " LIMIT ?, ?";
+            $params[] = $offset;
+            $params[] = $perPage;
+            
+            // Get leads
+            $leads = $db->getRows($sql, $params);
+            
+            return [
+                'leads' => $leads,
+                'pagination' => [
+                    'total' => $totalCount,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'total_pages' => $totalPages
+                ]
+            ];
+        } else {
+            // Get all leads without pagination
+            return $db->getRows($sql, $params);
+        }
     }
     
     /**
-     * Get lead with related data
+     * Get lead by ID
+     * 
+     * @param int $id Lead ID
+     * @return array|false Lead data or false if not found
      */
-    public function getWithRelations($id) {
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS assigned_to_name, cu.name AS created_by
-                FROM {$this->table} l
-                JOIN states s ON l.state_id = s.id
-                JOIN cities c ON l.city_id = c.id
-                LEFT JOIN users u ON l.assigned_to = u.id
-                LEFT JOIN users cu ON l.created_by = cu.id
+    public function getLeadById($id) {
+        $db = Database::getInstance();
+        
+        $sql = "SELECT l.*, 
+                s.name AS state_name, 
+                c.name AS city_name, 
+                u.name AS assigned_to_name 
+                FROM leads l 
+                LEFT JOIN states s ON l.state_id = s.id 
+                LEFT JOIN cities c ON l.city_id = c.id 
+                LEFT JOIN users u ON l.assigned_to = u.id 
                 WHERE l.id = ? AND l.deleted_at IS NULL";
         
-        return $this->db->getRow($sql, [$id]);
+        return $db->getRow($sql, [$id]);
     }
     
     /**
-     * Update lead status
+     * Create lead
+     * 
+     * @param array $data Lead data
+     * @return int|false Lead ID or false on failure
      */
-    public function updateStatus($id, $status, $otherReason = null, $followUpDate = null, $remarks = null) {
-        $data = [
-            'status' => $status,
-            'other_reason' => $otherReason,
-            'follow_up_date' => $followUpDate,
-            'remarks' => $remarks
-        ];
+    public function createLead($data) {
+        $db = Database::getInstance();
         
-        // Create call log
-        $callLogData = [
-            'lead_id' => $id,
-            'status' => $status,
-            'other_reason' => $otherReason,
-            'follow_up_date' => $followUpDate,
-            'remarks' => $remarks,
-            'created_by' => getCurrentUserId()
-        ];
+        // Set created_by
+        $data['created_by'] = $_SESSION['user_id'];
         
-        $this->db->insert('call_logs', $callLogData);
+        // Insert lead
+        return $db->insert('leads', $data);
+    }
+    
+    /**
+     * Update lead
+     * 
+     * @param int $id Lead ID
+     * @param array $data Lead data
+     * @return bool Success or failure
+     */
+    public function updateLead($id, $data) {
+        $db = Database::getInstance();
+        
+        // Set updated_by
+        $data['updated_by'] = $_SESSION['user_id'];
         
         // Update lead
-        return $this->update($id, $data);
+        return $db->update('leads', $data, 'id = ?', [$id]);
     }
     
     /**
-     * Get lead stats
+     * Delete lead (soft delete)
+     * 
+     * @param int $id Lead ID
+     * @return bool Success or failure
      */
-    public function getStats() {
-        $where = "deleted_at IS NULL";
-        $params = [];
+    public function deleteLead($id) {
+        $db = Database::getInstance();
         
-        // Apply territory restrictions for employees
-        if (!hasRole('administrator')) {
-            $userId = getCurrentUserId();
-            $where .= " AND (
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = state_id AND et.city_id IS NULL AND et.deleted_at IS NULL
-                )
-                OR
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = state_id AND et.city_id = city_id AND et.deleted_at IS NULL
-                )
-            )";
-            $params[] = $userId;
-            $params[] = $userId;
+        // Set deleted_at and updated_by
+        $data = [
+            'deleted_at' => date('Y-m-d H:i:s'),
+            'updated_by' => $_SESSION['user_id']
+        ];
+        
+        // Update lead
+        return $db->update('leads', $data, 'id = ?', [$id]);
+    }
+    
+    /**
+     * Check if user has access to lead
+     * 
+     * @param int $leadId Lead ID
+     * @param int $userId User ID
+     * @return bool Whether user has access
+     */
+    public function checkLeadAccess($leadId, $userId) {
+        $db = Database::getInstance();
+        
+        // Get lead
+        $lead = $this->getLeadById($leadId);
+        
+        if (!$lead) {
+            return false;
         }
         
-        $sql = "SELECT
-                COUNT(*) AS total_leads,
-                SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) AS new_leads,
-                SUM(CASE WHEN status = 'follow_up' THEN 1 ELSE 0 END) AS follow_ups,
-                SUM(CASE WHEN status = 'not_attend' THEN 1 ELSE 0 END) AS not_attend,
-                SUM(CASE WHEN status = 'wrong_number' THEN 1 ELSE 0 END) AS wrong_number,
-                SUM(CASE WHEN status = 'other' THEN 1 ELSE 0 END) AS other,
-                SUM(CASE WHEN status = 'dead' THEN 1 ELSE 0 END) AS dead,
-                SUM(CASE WHEN status = 'interested' THEN 1 ELSE 0 END) AS interested,
-                SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) AS wins
-                FROM {$this->table}
-                WHERE {$where}";
+        // Check if user is assigned to lead
+        if ($lead['assigned_to'] == $userId) {
+            return true;
+        }
         
-        return $this->db->getRow($sql, $params);
+        // Check if lead is in user's territory
+        $sql = "SELECT COUNT(*) FROM employee_territories 
+                WHERE user_id = ? AND deleted_at IS NULL 
+                AND (
+                    (state_id = ? AND city_id IS NULL) OR 
+                    (state_id = ? AND city_id = ?)
+                )";
+        
+        $params = [
+            $userId,
+            $lead['state_id'],
+            $lead['state_id'],
+            $lead['city_id']
+        ];
+        
+        $count = $db->getVar($sql, $params);
+        
+        return $count > 0;
+    }
+    
+    /**
+     * Get lead statistics
+     * 
+     * @return array Statistics
+     */
+    public function getLeadStats() {
+        $db = Database::getInstance();
+        
+        $stats = [
+            'total' => 0,
+            'new_leads' => 0,
+            'follow_ups' => 0,
+            'not_attend' => 0,
+            'wrong_number' => 0,
+            'other' => 0,
+            'dead' => 0,
+            'interested' => 0,
+            'wins' => 0
+        ];
+        
+        // Base query
+        $sql = "SELECT COUNT(*) FROM leads WHERE deleted_at IS NULL";
+        $params = [];
+        
+        // Apply user role restrictions
+        if (!hasRole('administrator')) {
+            $userId = $_SESSION['user_id'];
+            
+            // Get user's territories
+            $territorySql = "SELECT state_id, city_id FROM employee_territories WHERE user_id = ? AND deleted_at IS NULL";
+            $territories = $db->getRows($territorySql, [$userId]);
+            
+            if (!empty($territories)) {
+                $territoryConditions = [];
+                
+                foreach ($territories as $territory) {
+                    if (empty($territory['city_id'])) {
+                        // User has access to entire state
+                        $territoryConditions[] = "(state_id = ?)";
+                        $params[] = $territory['state_id'];
+                    } else {
+                        // User has access to specific city
+                        $territoryConditions[] = "(state_id = ? AND city_id = ?)";
+                        $params[] = $territory['state_id'];
+                        $params[] = $territory['city_id'];
+                    }
+                }
+                
+                // Add assigned leads
+                $territoryConditions[] = "assigned_to = ?";
+                $params[] = $userId;
+                
+                $sql .= " AND (" . implode(" OR ", $territoryConditions) . ")";
+            } else {
+                // User has no territories, only show assigned leads
+                $sql .= " AND assigned_to = ?";
+                $params[] = $userId;
+            }
+        }
+        
+        // Get total count
+        $stats['total'] = $db->getVar($sql, $params);
+        
+        // Get counts by status
+        $statuses = ['new', 'follow_up', 'not_attend', 'wrong_number', 'other', 'dead', 'interested', 'win'];
+        
+        foreach ($statuses as $status) {
+            $statusSql = $sql . " AND status = ?";
+            $statusParams = array_merge($params, [$status]);
+            
+            $key = $status == 'new' ? 'new_leads' : ($status == 'follow_up' ? 'follow_ups' : ($status == 'win' ? 'wins' : $status));
+            $stats[$key] = $db->getVar($statusSql, $statusParams);
+        }
+        
+        return $stats;
     }
     
     /**
      * Get today's follow-ups
+     * 
+     * @return array Follow-ups
      */
     public function getTodayFollowUps() {
-        $today = date('Y-m-d');
-        $where = "status = 'follow_up' AND DATE(follow_up_date) = ? AND deleted_at IS NULL";
-        $params = [$today];
+        $db = Database::getInstance();
         
-        // Apply territory restrictions for employees
+        // Base query
+        $sql = "SELECT l.id, l.name, l.phone, l.follow_up_date 
+                FROM leads l 
+                WHERE l.deleted_at IS NULL 
+                AND l.status = 'follow_up' 
+                AND DATE(l.follow_up_date) = CURDATE()";
+        
+        $params = [];
+        
+        // Apply user role restrictions
         if (!hasRole('administrator')) {
-            $userId = getCurrentUserId();
-            $where .= " AND (
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = state_id AND et.city_id IS NULL AND et.deleted_at IS NULL
-                )
-                OR
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = state_id AND et.city_id = city_id AND et.deleted_at IS NULL
-                )
-            )";
-            $params[] = $userId;
-            $params[] = $userId;
+            $userId = $_SESSION['user_id'];
+            
+            // Get user's territories
+            $territorySql = "SELECT state_id, city_id FROM employee_territories WHERE user_id = ? AND deleted_at IS NULL";
+            $territories = $db->getRows($territorySql, [$userId]);
+            
+            if (!empty($territories)) {
+                $territoryConditions = [];
+                
+                foreach ($territories as $territory) {
+                    if (empty($territory['city_id'])) {
+                        // User has access to entire state
+                        $territoryConditions[] = "(l.state_id = ?)";
+                        $params[] = $territory['state_id'];
+                    } else {
+                        // User has access to specific city
+                        $territoryConditions[] = "(l.state_id = ? AND l.city_id = ?)";
+                        $params[] = $territory['state_id'];
+                        $params[] = $territory['city_id'];
+                    }
+                }
+                
+                // Add assigned leads
+                $territoryConditions[] = "l.assigned_to = ?";
+                $params[] = $userId;
+                
+                $sql .= " AND (" . implode(" OR ", $territoryConditions) . ")";
+            } else {
+                // User has no territories, only show assigned leads
+                $sql .= " AND l.assigned_to = ?";
+                $params[] = $userId;
+            }
         }
         
-        $sql = "SELECT * FROM {$this->table} WHERE {$where} ORDER BY follow_up_date ASC";
+        // Order by follow-up date
+        $sql .= " ORDER BY l.follow_up_date ASC";
         
-        return $this->db->getRows($sql, $params);
+        return $db->getRows($sql, $params);
     }
     
     /**
      * Get daily call count
+     * 
+     * @param int $days Number of days
+     * @return array Daily call counts
      */
-    public function getDailyCallCount($days = 30) {
-        $sql = "SELECT DATE(cl.created_at) AS date, COUNT(*) AS count
-                FROM call_logs cl
-                WHERE cl.created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL ? DAY) AND cl.deleted_at IS NULL
-                GROUP BY DATE(cl.created_at)
-                ORDER BY DATE(cl.created_at) ASC";
+    public function getDailyCallCount($days = 7) {
+        $db = Database::getInstance();
         
-        return $this->db->getRows($sql, [$days]);
+        // Base query
+        $sql = "SELECT DATE(cl.created_at) AS date, COUNT(*) AS count 
+                FROM call_logs cl 
+                JOIN leads l ON cl.lead_id = l.id 
+                WHERE cl.deleted_at IS NULL 
+                AND l.deleted_at IS NULL 
+                AND DATE(cl.created_at) >= DATE_SUB(CURDATE(), INTERVAL ? DAY)";
+        
+        $params = [$days];
+        
+        // Apply user role restrictions
+        if (!hasRole('administrator')) {
+            $userId = $_SESSION['user_id'];
+            
+            // Get user's territories
+            $territorySql = "SELECT state_id, city_id FROM employee_territories WHERE user_id = ? AND deleted_at IS NULL";
+            $territories = $db->getRows($territorySql, [$userId]);
+            
+            if (!empty($territories)) {
+                $territoryConditions = [];
+                
+                foreach ($territories as $territory) {
+                    if (empty($territory['city_id'])) {
+                        // User has access to entire state
+                        $territoryConditions[] = "(l.state_id = ?)";
+                        $params[] = $territory['state_id'];
+                    } else {
+                        // User has access to specific city
+                        $territoryConditions[] = "(l.state_id = ? AND l.city_id = ?)";
+                        $params[] = $territory['state_id'];
+                        $params[] = $territory['city_id'];
+                    }
+                }
+                
+                // Add assigned leads
+                $territoryConditions[] = "l.assigned_to = ?";
+                $params[] = $userId;
+                
+                $sql .= " AND (" . implode(" OR ", $territoryConditions) . ")";
+            } else {
+                // User has no territories, only show assigned leads
+                $sql .= " AND l.assigned_to = ?";
+                $params[] = $userId;
+            }
+        }
+        
+        // Group by date and order by date
+        $sql .= " GROUP BY DATE(cl.created_at) ORDER BY DATE(cl.created_at) ASC";
+        
+        return $db->getRows($sql, $params);
     }
     
     /**
-     * Export leads to CSV
+     * Get recent call logs
+     * 
+     * @param int $limit Number of logs to get
+     * @return array Recent call logs
      */
-    public function exportToCSV($filters = []) {
-        $where = "l.deleted_at IS NULL";
+    public function getRecentCallLogs($limit = 5) {
+        $db = Database::getInstance();
+        
+        // Base query
+        $sql = "SELECT cl.*, l.id AS lead_id, l.name AS lead_name 
+                FROM call_logs cl 
+                JOIN leads l ON cl.lead_id = l.id 
+                WHERE cl.deleted_at IS NULL 
+                AND l.deleted_at IS NULL";
+        
         $params = [];
         
-        // Apply filters
-        if (!empty($filters['status'])) {
-            $where .= " AND l.status = ?";
-            $params[] = $filters['status'];
-        }
-        
-        if (!empty($filters['state_id'])) {
-            $where .= " AND l.state_id = ?";
-            $params[] = $filters['state_id'];
-        }
-        
-        if (!empty($filters['city_id'])) {
-            $where .= " AND l.city_id = ?";
-            $params[] = $filters['city_id'];
-        }
-        
-        if (!empty($filters['assigned_to'])) {
-            $where .= " AND l.assigned_to = ?";
-            $params[] = $filters['assigned_to'];
-        }
-        
-        if (!empty($filters['date_from'])) {
-            $where .= " AND DATE(l.created_at) >= ?";
-            $params[] = $filters['date_from'];
-        }
-        
-        if (!empty($filters['date_to'])) {
-            $where .= " AND DATE(l.created_at) <= ?";
-            $params[] = $filters['date_to'];
-        }
-        
-        if (!empty($filters['search'])) {
-            $search = '%' . $filters['search'] . '%';
-            $where .= " AND (l.name LIKE ? OR l.email LIKE ? OR l.phone LIKE ?)";
-            $params[] = $search;
-            $params[] = $search;
-            $params[] = $search;
-        }
-        
-        // Apply territory restrictions for employees
+        // Apply user role restrictions
         if (!hasRole('administrator')) {
-            $userId = getCurrentUserId();
-            $where .= " AND (
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id IS NULL AND et.deleted_at IS NULL
-                )
-                OR
-                EXISTS (
-                    SELECT 1 FROM employee_territories et
-                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id = l.city_id AND et.deleted_at IS NULL
-                )
-            )";
-            $params[] = $userId;
-            $params[] = $userId;
+            $userId = $_SESSION['user_id'];
+            
+            // Get user's territories
+            $territorySql = "SELECT state_id, city_id FROM employee_territories WHERE user_id = ? AND deleted_at IS NULL";
+            $territories = $db->getRows($territorySql, [$userId]);
+            
+            if (!empty($territories)) {
+                $territoryConditions = [];
+                
+                foreach ($territories as $territory) {
+                    if (empty($territory['city_id'])) {
+                        // User has access to entire state
+                        $territoryConditions[] = "(l.state_id = ?)";
+                        $params[] = $territory['state_id'];
+                    } else {
+                        // User has access to specific city
+                        $territoryConditions[] = "(l.state_id = ? AND l.city_id = ?)";
+                        $params[] = $territory['state_id'];
+                        $params[] = $territory['city_id'];
+                    }
+                }
+                
+                // Add assigned leads
+                $territoryConditions[] = "l.assigned_to = ?";
+                $params[] = $userId;
+                
+                $sql .= " AND (" . implode(" OR ", $territoryConditions) . ")";
+            } else {
+                // User has no territories, only show assigned leads
+                $sql .= " AND l.assigned_to = ?";
+                $params[] = $userId;
+            }
         }
         
-        $sql = "SELECT l.id, l.name, l.email, l.phone, l.address, s.name AS state_name, c.name AS city_name,
-                l.status, l.other_reason, l.follow_up_date, l.remarks, u.name AS assigned_to_name,
-                l.created_at, cu.name AS created_by_name
-                FROM {$this->table} l
-                JOIN states s ON l.state_id = s.id
-                JOIN cities c ON l.city_id = c.id
-                LEFT JOIN users u ON l.assigned_to = u.id
-                LEFT JOIN users cu ON l.created_by = cu.id
-                WHERE {$where}
-                ORDER BY l.id DESC";
+        // Order by created_at and limit
+        $sql .= " ORDER BY cl.created_at DESC LIMIT ?";
+        $params[] = $limit;
         
-        $leads = $this->db->getRows($sql, $params);
+        return $db->getRows($sql, $params);
+    }
+    
+    /**
+     * Get employee performance stats
+     * 
+     * @return array Employee stats
+     */
+    public function getEmployeePerformanceStats() {
+        $db = Database::getInstance();
         
-        $headers = ['ID', 'Name', 'Email', 'Phone', 'Address', 'State', 'City', 'Status', 'Other Reason', 'Follow-up Date', 'Remarks', 'Assigned To', 'Created At', 'Created By'];
-        $data = [];
+        // Get employees
+        $sql = "SELECT id, name FROM users WHERE role = 'employee' AND status = 1 AND deleted_at IS NULL";
+        $employees = $db->getRows($sql);
         
-        foreach ($leads as $lead) {
-            $data[] = [
-                $lead['id'],
-                $lead['name'],
-                $lead['email'],
-                $lead['phone'],
-                $lead['address'],
-                $lead['state_name'],
-                $lead['city_name'],
-                ucfirst(str_replace('_', ' ', $lead['status'])),
-                $lead['other_reason'],
-                $lead['follow_up_date'] ? formatDateTime($lead['follow_up_date']) : '',
-                $lead['remarks'],
-                $lead['assigned_to_name'],
-                formatDateTime($lead['created_at']),
-                $lead['created_by_name']
+        $stats = [];
+        
+        foreach ($employees as $employee) {
+            // Get total leads
+            $totalSql = "SELECT COUNT(*) FROM leads WHERE assigned_to = ? AND deleted_at IS NULL";
+            $totalLeads = $db->getVar($totalSql, [$employee['id']]);
+            
+            // Get wins
+            $winsSql = "SELECT COUNT(*) FROM leads WHERE assigned_to = ? AND status = 'win' AND deleted_at IS NULL";
+            $wins = $db->getVar($winsSql, [$employee['id']]);
+            
+            // Calculate conversion rate
+            $conversionRate = $totalLeads > 0 ? round(($wins / $totalLeads) * 100, 2) : 0;
+            
+            $stats[] = [
+                'id' => $employee['id'],
+                'name' => $employee['name'],
+                'total_leads' => $totalLeads,
+                'wins' => $wins,
+                'conversion_rate' => $conversionRate
             ];
         }
         
-        return [
-            'headers' => $headers,
-            'data' => $data
-        ];
-    }
-    
-    /**
-     * Import leads from CSV
-     */
-    public function importFromCSV($data) {
-        $this->db->beginTransaction();
+        // Sort by conversion rate (descending)
+        usort($stats, function($a, $b) {
+            return $b['conversion_rate'] <=> $a['conversion_rate'];
+        });
         
-        try {
-            $count = 0;
-            
-            foreach ($data as $row) {
-                $leadData = [
-                    'name' => $row['name'],
-                    'email' => $row['email'],
-                    'phone' => $row['phone'],
-                    'address' => $row['address'],
-                    'state_id' => $row['state_id'],
-                    'city_id' => $row['city_id'],
-                    'remarks' => $row['remarks'],
-                    'status' => 'new',
-                    'created_by' => getCurrentUserId()
-                ];
-                
-                $this->create($leadData);
-                $count++;
-            }
-            
-            $this->db->commit();
-            return $count;
-        } catch (Exception $e) {
-            $this->db->rollback();
-            throw $e;
-        }
+        return $stats;
     }
 }
 

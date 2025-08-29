@@ -175,6 +175,6 @@ CREATE TABLE IF NOT EXISTS `password_reset_tokens` (
 
 -- Insert default admin user
 INSERT INTO `users` (`name`, `email`, `password`, `role`, `status`, `created_at`)
-VALUES ('Administrator', 'sales@getrigthhire.com', '$2y$12$1WtUipmLkkmRQo0.Y9.8eeXaMZxXRh0zw1v.XNLxHECPQhhO9iMVu', 'administrator', 1, NOW());
+VALUES ('Administrator', 'sales@getrighthire.com', '$2y$12$1WtUipmLkkmRQo0.Y9.8eeXaMZxXRh0zw1v.XNLxHECPQhhO9iMVu', 'administrator', 1, NOW());
 -- Password: Sales@112233
 

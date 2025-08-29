@@ -5,136 +5,233 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($pageTitle) ? $pageTitle . ' - ' . APP_NAME : APP_NAME; ?></title>
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="<?php echo APP_URL; ?>/assets/img/favicon.ico" type="image/x-icon">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     
     <!-- DataTables CSS -->
-    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    
+    <!-- Flatpickr CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+    
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     
     <!-- Custom CSS -->
     <link href="<?php echo APP_URL; ?>/assets/css/style.css" rel="stylesheet">
     
-    <?php if (isset($extraCss)): ?>
-        <?php echo $extraCss; ?>
-    <?php endif; ?>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.10.3/dist/cdn.min.js"></script>
 </head>
 <body>
     <?php if (isLoggedIn()): ?>
-        <!-- Navigation -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="<?php echo APP_URL; ?>/dashboard">
-                    <?php echo APP_NAME; ?>
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $route == 'dashboard' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/dashboard">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $route == 'leads' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/leads">
-                                <i class="fas fa-users"></i> Leads
-                            </a>
-                        </li>
-                        
-                        <?php if (hasRole('administrator')): ?>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle <?php echo in_array($route, ['states', 'cities']) ? 'active' : ''; ?>" href="#" id="geoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-map-marker-alt"></i> Geography
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="geoDropdown">
-                                    <li>
-                                        <a class="dropdown-item" href="<?php echo APP_URL; ?>/states">
-                                            <i class="fas fa-flag"></i> States
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="<?php echo APP_URL; ?>/cities">
-                                            <i class="fas fa-city"></i> Cities
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-                            
-                            <li class="nav-item">
-                                <a class="nav-link <?php echo $route == 'users' ? 'active' : ''; ?>" href="<?php echo APP_URL; ?>/users">
-                                    <i class="fas fa-user-tie"></i> Employees
-                                </a>
-                            </li>
-                            
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle <?php echo in_array($route, ['import', 'export']) ? 'active' : ''; ?>" href="#" id="importExportDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-file-import"></i> Import/Export
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="importExportDropdown">
-                                    <li>
-                                        <a class="dropdown-item" href="<?php echo APP_URL; ?>/import">
-                                            <i class="fas fa-file-import"></i> Import Leads
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="<?php echo APP_URL; ?>/export">
-                                            <i class="fas fa-file-export"></i> Export Leads
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-                        <?php endif; ?>
-                    </ul>
+        <div class="wrapper">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="sidebar">
+                <div class="sidebar-header">
+                    <h3><?php echo APP_NAME; ?></h3>
+                    <div class="sidebar-toggle-btn d-md-none">
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+                
+                <div class="sidebar-user">
+                    <div class="user-info">
+                        <img src="<?php echo APP_URL; ?>/assets/img/user-avatar.png" alt="User Avatar" class="user-avatar">
+                        <div class="user-details">
+                            <h6 class="mb-0"><?php echo getCurrentUserName(); ?></h6>
+                            <span class="user-role"><?php echo ucfirst(getCurrentUserRole()); ?></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <ul class="list-unstyled components">
+                    <li class="<?php echo $route === 'dashboard' ? 'active' : ''; ?>">
+                        <a href="<?php echo APP_URL; ?>/dashboard">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </li>
                     
-                    <ul class="navbar-nav">
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-user"></i> <?php echo $_SESSION['user_name']; ?>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    <li class="<?php echo strpos($route, 'leads') === 0 ? 'active' : ''; ?>">
+                        <a href="#leadsSubmenu" data-bs-toggle="collapse" aria-expanded="<?php echo strpos($route, 'leads') === 0 ? 'true' : 'false'; ?>" class="dropdown-toggle">
+                            <i class="fas fa-user-tag"></i> Leads
+                        </a>
+                        <ul class="collapse list-unstyled <?php echo strpos($route, 'leads') === 0 ? 'show' : ''; ?>" id="leadsSubmenu">
+                            <li>
+                                <a href="<?php echo APP_URL; ?>/leads">
+                                    <i class="fas fa-list"></i> All Leads
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo APP_URL; ?>/leads/create">
+                                    <i class="fas fa-plus"></i> Add New
+                                </a>
+                            </li>
+                            <?php if (hasRole('administrator')): ?>
                                 <li>
-                                    <a class="dropdown-item" href="<?php echo APP_URL; ?>/users/profile">
-                                        <i class="fas fa-user-cog"></i> Profile
+                                    <a href="<?php echo APP_URL; ?>/leads/import">
+                                        <i class="fas fa-file-import"></i> Import
                                     </a>
                                 </li>
-                                <li><hr class="dropdown-divider"></li>
+                            <?php endif; ?>
+                        </ul>
+                    </li>
+                    
+                    <?php if (hasRole('administrator')): ?>
+                        <li class="<?php echo strpos($route, 'states') === 0 ? 'active' : ''; ?>">
+                            <a href="<?php echo APP_URL; ?>/states">
+                                <i class="fas fa-map"></i> States
+                            </a>
+                        </li>
+                        
+                        <li class="<?php echo strpos($route, 'cities') === 0 ? 'active' : ''; ?>">
+                            <a href="<?php echo APP_URL; ?>/cities">
+                                <i class="fas fa-city"></i> Cities
+                            </a>
+                        </li>
+                        
+                        <li class="<?php echo strpos($route, 'users') === 0 ? 'active' : ''; ?>">
+                            <a href="#usersSubmenu" data-bs-toggle="collapse" aria-expanded="<?php echo strpos($route, 'users') === 0 ? 'true' : 'false'; ?>" class="dropdown-toggle">
+                                <i class="fas fa-users"></i> Users
+                            </a>
+                            <ul class="collapse list-unstyled <?php echo strpos($route, 'users') === 0 ? 'show' : ''; ?>" id="usersSubmenu">
                                 <li>
-                                    <a class="dropdown-item" href="<?php echo APP_URL; ?>/auth/logout">
-                                        <i class="fas fa-sign-out-alt"></i> Logout
+                                    <a href="<?php echo APP_URL; ?>/users">
+                                        <i class="fas fa-list"></i> All Users
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?php echo APP_URL; ?>/users/create">
+                                        <i class="fas fa-user-plus"></i> Add New
                                     </a>
                                 </li>
                             </ul>
                         </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    <?php endif; ?>
-    
-    <!-- Main Content -->
-    <div class="container-fluid mt-4">
-        <?php
-        // Display flash messages
-        $flash = getFlashMessage();
-        if ($flash) {
-            $alertClass = 'alert-info';
+                    <?php endif; ?>
+                    
+                    <li class="<?php echo strpos($route, 'reports') === 0 ? 'active' : ''; ?>">
+                        <a href="#reportsSubmenu" data-bs-toggle="collapse" aria-expanded="<?php echo strpos($route, 'reports') === 0 ? 'true' : 'false'; ?>" class="dropdown-toggle">
+                            <i class="fas fa-chart-bar"></i> Reports
+                        </a>
+                        <ul class="collapse list-unstyled <?php echo strpos($route, 'reports') === 0 ? 'show' : ''; ?>" id="reportsSubmenu">
+                            <li>
+                                <a href="<?php echo APP_URL; ?>/reports/lead-status">
+                                    <i class="fas fa-chart-pie"></i> Lead Status
+                                </a>
+                            </li>
+                            <li>
+                                <a href="<?php echo APP_URL; ?>/reports/call-log">
+                                    <i class="fas fa-phone-alt"></i> Call Logs
+                                </a>
+                            </li>
+                            <?php if (hasRole('administrator')): ?>
+                                <li>
+                                    <a href="<?php echo APP_URL; ?>/reports/employee-performance">
+                                        <i class="fas fa-user-chart"></i> Employee Performance
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                    </li>
+                    
+                    <li>
+                        <a href="<?php echo APP_URL; ?>/users/profile">
+                            <i class="fas fa-user-circle"></i> My Profile
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="<?php echo APP_URL; ?>/auth/logout" onclick="return confirm('Are you sure you want to logout?');">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </nav>
             
-            if ($flash['type'] == 'success') {
-                $alertClass = 'alert-success';
-            } elseif ($flash['type'] == 'error') {
-                $alertClass = 'alert-danger';
-            } elseif ($flash['type'] == 'warning') {
-                $alertClass = 'alert-warning';
-            }
-        ?>
-            <div class="alert <?php echo $alertClass; ?> alert-dismissible fade show" role="alert">
-                <?php echo $flash['message']; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <?php } ?>
+            <!-- Page Content -->
+            <div id="content">
+                <!-- Top Navbar -->
+                <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+                    <div class="container-fluid">
+                        <button type="button" id="sidebarCollapse" class="btn btn-primary d-md-none">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        
+                        <div class="d-flex align-items-center ms-auto">
+                            <?php if (isset($todayFollowUps) && count($todayFollowUps) > 0): ?>
+                                <div class="dropdown me-3">
+                                    <button class="btn btn-outline-primary position-relative" type="button" id="followUpDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-bell"></i>
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                            <?php echo count($todayFollowUps); ?>
+                                        </span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="followUpDropdown">
+                                        <li><h6 class="dropdown-header">Today's Follow-ups</h6></li>
+                                        <?php foreach ($todayFollowUps as $followUp): ?>
+                                            <li>
+                                                <a class="dropdown-item" href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="flex-grow-1">
+                                                            <strong><?php echo htmlspecialchars($followUp['name']); ?></strong>
+                                                            <div class="small text-muted">
+                                                                <?php echo date('h:i A', strtotime($followUp['follow_up_date'])); ?>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <i class="fas fa-chevron-right text-muted"></i>
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="dropdown">
+                                <button class="btn btn-link dropdown-toggle text-decoration-none" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <img src="<?php echo APP_URL; ?>/assets/img/user-avatar.png" alt="User Avatar" class="user-avatar-sm me-1">
+                                    <span class="d-none d-md-inline"><?php echo getCurrentUserName(); ?></span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <li>
+                                        <a class="dropdown-item" href="<?php echo APP_URL; ?>/users/profile">
+                                            <i class="fas fa-user-circle me-2"></i> My Profile
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="<?php echo APP_URL; ?>/auth/logout" onclick="return confirm('Are you sure you want to logout?');">
+                                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+                
+                <!-- Main Content -->
+                <div class="container-fluid p-4">
+                    <?php echo displayFlashMessage(); ?>
+    <?php else: ?>
+        <!-- Login/Register Pages -->
+        <div class="auth-container">
+            <div class="auth-content">
+                <div class="auth-header text-center mb-4">
+                    <h2><?php echo APP_NAME; ?></h2>
+                </div>
+                
+                <?php echo displayFlashMessage(); ?>
+    <?php endif; ?>
 

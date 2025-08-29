@@ -1,133 +1,91 @@
 <?php
 /**
- * Right Hire CRM
+ * Main Entry Point
  * 
- * Main entry point for the application.
+ * This file serves as the main entry point for the application.
+ * It handles routing and controller instantiation.
  */
 
-// Load configuration
+// Include configuration
 require_once 'config/config.php';
 
-// Load includes
-require_once 'includes/session.php';
-require_once 'includes/functions.php';
-require_once 'includes/auth.php';
+// Define routes
+$routes = [
+    // Auth routes
+    'auth/login' => ['controller' => 'AuthController', 'action' => 'login'],
+    'auth/logout' => ['controller' => 'AuthController', 'action' => 'logout'],
+    'auth/forgot-password' => ['controller' => 'AuthController', 'action' => 'forgotPassword'],
+    'auth/reset-password' => ['controller' => 'AuthController', 'action' => 'resetPassword'],
+    
+    // Dashboard routes
+    'dashboard' => ['controller' => 'DashboardController', 'action' => 'index'],
+    
+    // State routes
+    'states' => ['controller' => 'StateController', 'action' => 'index'],
+    'states/create' => ['controller' => 'StateController', 'action' => 'create'],
+    'states/edit' => ['controller' => 'StateController', 'action' => 'edit'],
+    'states/delete' => ['controller' => 'StateController', 'action' => 'delete'],
+    'states/toggle-status' => ['controller' => 'StateController', 'action' => 'toggleStatus'],
+    
+    // City routes
+    'cities' => ['controller' => 'CityController', 'action' => 'index'],
+    'cities/create' => ['controller' => 'CityController', 'action' => 'create'],
+    'cities/edit' => ['controller' => 'CityController', 'action' => 'edit'],
+    'cities/delete' => ['controller' => 'CityController', 'action' => 'delete'],
+    'cities/toggle-status' => ['controller' => 'CityController', 'action' => 'toggleStatus'],
+    'cities/get-by-state' => ['controller' => 'CityController', 'action' => 'getByState'],
+    
+    // Lead routes
+    'leads' => ['controller' => 'LeadController', 'action' => 'index'],
+    'leads/create' => ['controller' => 'LeadController', 'action' => 'create'],
+    'leads/edit' => ['controller' => 'LeadController', 'action' => 'edit'],
+    'leads/view' => ['controller' => 'LeadController', 'action' => 'view'],
+    'leads/delete' => ['controller' => 'LeadController', 'action' => 'delete'],
+    'leads/update-status' => ['controller' => 'LeadController', 'action' => 'updateStatus'],
+    'leads/import' => ['controller' => 'LeadController', 'action' => 'import'],
+    'leads/export' => ['controller' => 'LeadController', 'action' => 'export'],
+    
+    // User routes
+    'users' => ['controller' => 'UserController', 'action' => 'index'],
+    'users/create' => ['controller' => 'UserController', 'action' => 'create'],
+    'users/edit' => ['controller' => 'UserController', 'action' => 'edit'],
+    'users/delete' => ['controller' => 'UserController', 'action' => 'delete'],
+    'users/toggle-status' => ['controller' => 'UserController', 'action' => 'toggleStatus'],
+    'users/territories' => ['controller' => 'UserController', 'action' => 'territories'],
+    'users/add-territory' => ['controller' => 'UserController', 'action' => 'addTerritory'],
+    'users/remove-territory' => ['controller' => 'UserController', 'action' => 'removeTerritory'],
+    'users/profile' => ['controller' => 'UserController', 'action' => 'profile'],
+    
+    // Report routes
+    'reports' => ['controller' => 'ReportController', 'action' => 'index'],
+    'reports/lead-status' => ['controller' => 'ReportController', 'action' => 'leadStatus'],
+    'reports/call-log' => ['controller' => 'ReportController', 'action' => 'callLog'],
+    'reports/employee-performance' => ['controller' => 'ReportController', 'action' => 'employeePerformance'],
+    'reports/export-lead-status' => ['controller' => 'ReportController', 'action' => 'exportLeadStatus'],
+    'reports/export-call-log' => ['controller' => 'ReportController', 'action' => 'exportCallLog'],
+    'reports/export-employee-performance' => ['controller' => 'ReportController', 'action' => 'exportEmployeePerformance']
+];
 
-// Get route and action from URL
+// Get route from URL
 $route = isset($_GET['route']) ? $_GET['route'] : 'dashboard';
-$action = isset($_GET['action']) ? $_GET['action'] : 'index';
 
-// Security check and authorization
-if (!isLoggedIn() && $route != 'auth') {
-    header('Location: index.php?route=auth&action=login');
-    exit;
-}
-
-// Route to appropriate controller
-switch ($route) {
-    case 'auth':
-        require_once 'controllers/AuthController.php';
-        $controller = new AuthController();
-        break;
+// Check if route exists
+if (isset($routes[$route])) {
+    $controllerName = $routes[$route]['controller'];
+    $actionName = $routes[$route]['action'];
     
-    case 'users':
-        require_once 'controllers/UserController.php';
-        $controller = new UserController();
-        
-        // Check if administrator for user management
-        if ($action != 'profile' && !hasRole('administrator')) {
-            setFlashMessage('error', 'You do not have permission to access user management');
-            redirect('dashboard');
-            exit;
-        }
-        break;
+    // Include controller
+    require_once 'controllers/' . $controllerName . '.php';
     
-    case 'states':
-        require_once 'controllers/StateController.php';
-        $controller = new StateController();
-        
-        // Check if administrator for state management
-        if (!hasRole('administrator')) {
-            setFlashMessage('error', 'You do not have permission to access state management');
-            redirect('dashboard');
-            exit;
-        }
-        break;
+    // Instantiate controller
+    $controller = new $controllerName();
     
-    case 'cities':
-        require_once 'controllers/CityController.php';
-        $controller = new CityController();
-        
-        // Check if administrator for city management
-        if (!hasRole('administrator')) {
-            setFlashMessage('error', 'You do not have permission to access city management');
-            redirect('dashboard');
-            exit;
-        }
-        break;
-    
-    case 'leads':
-        require_once 'controllers/LeadController.php';
-        $controller = new LeadController();
-        break;
-    
-    case 'import':
-        require_once 'controllers/ImportExportController.php';
-        $controller = new ImportExportController();
-        
-        // Check if administrator for import/export
-        if (!hasRole('administrator')) {
-            setFlashMessage('error', 'You do not have permission to access import/export');
-            redirect('dashboard');
-            exit;
-        }
-        break;
-    
-    case 'export':
-        require_once 'controllers/ImportExportController.php';
-        $controller = new ImportExportController();
-        break;
-    
-    case 'api':
-        // Handle API requests
-        header('Content-Type: application/json');
-        
-        $apiRoute = isset($_GET['api_route']) ? $_GET['api_route'] : '';
-        
-        switch ($apiRoute) {
-            case 'cities':
-                require_once 'api/cities.php';
-                break;
-            
-            case 'leads':
-                require_once 'api/leads.php';
-                break;
-            
-            case 'users':
-                require_once 'api/users.php';
-                break;
-            
-            case 'states':
-                require_once 'api/states.php';
-                break;
-            
-            default:
-                echo json_encode(['error' => 'Invalid API route']);
-                exit;
-        }
-        break;
-    
-    default:
-        require_once 'controllers/DashboardController.php';
-        $controller = new DashboardController();
-        $route = 'dashboard';
-}
-
-// Call the appropriate method
-if (method_exists($controller, $action)) {
-    $controller->$action();
+    // Call action
+    $controller->$actionName();
 } else {
-    // Default to index if method doesn't exist
-    $controller->index();
+    // Route not found
+    header('HTTP/1.0 404 Not Found');
+    echo '404 - Page not found';
+    exit;
 }
 

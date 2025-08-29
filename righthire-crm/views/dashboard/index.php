@@ -1,449 +1,461 @@
-<?php
-$pageTitle = 'Dashboard';
-include 'views/templates/header.php';
-?>
+<?php include 'views/templates/header.php'; ?>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3"><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
-        <div>
-            <a href="<?php echo APP_URL; ?>/leads/create" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Add New Lead
-            </a>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshDashboard">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="todayBtn">
+                Today
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="weekBtn">
+                This Week
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="monthBtn">
+                This Month
+            </button>
         </div>
     </div>
-    
-    <!-- Stats Cards -->
-    <div class="row">
-        <div class="col-md-6 col-lg-3 mb-4">
-            <div class="card border-left-primary shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Leads</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['total_leads']; ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent">
-                    <a href="<?php echo APP_URL; ?>/leads" class="text-primary">View All</a>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6 col-lg-3 mb-4">
-            <div class="card border-left-success shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                New Leads</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['new_leads']; ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-plus fa-2x text-gray-300"></i>
+</div>
+
+<!-- Status Cards -->
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-dashboard card-new h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-0">New Leads</h6>
+                        <h2 class="mt-2 mb-0"><?php echo $stats['new_leads']; ?></h2>
+                        <div class="small text-success mt-1">
+                            <i class="fas fa-arrow-up"></i> 3.48% since last week
                         </div>
                     </div>
-                </div>
-                <div class="card-footer bg-transparent">
-                    <a href="<?php echo APP_URL; ?>/leads?status=new" class="text-success">View New Leads</a>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6 col-lg-3 mb-4">
-            <div class="card border-left-warning shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Follow-ups Today</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo count($todayFollowUps); ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
-                        </div>
+                    <div class="bg-primary bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-user-plus text-primary fa-2x"></i>
                     </div>
-                </div>
-                <div class="card-footer bg-transparent">
-                    <a href="<?php echo APP_URL; ?>/leads?status=follow_up" class="text-warning">View Follow-ups</a>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6 col-lg-3 mb-4">
-            <div class="card border-left-info shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Wins</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['wins']; ?></div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-trophy fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent">
-                    <a href="<?php echo APP_URL; ?>/leads?status=win" class="text-info">View Wins</a>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="row">
-        <!-- Today's Follow-ups -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header bg-warning text-white">
-                    <h6 class="m-0 font-weight-bold"><i class="fas fa-calendar-check"></i> Today's Follow-ups</h6>
-                </div>
-                <div class="card-body">
-                    <?php if (empty($todayFollowUps)): ?>
-                        <p class="text-center">No follow-ups scheduled for today.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Phone</th>
-                                        <th>Location</th>
-                                        <th>Time</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($todayFollowUps as $lead): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($lead['name']); ?></td>
-                                            <td><?php echo htmlspecialchars($lead['phone']); ?></td>
-                                            <td><?php echo htmlspecialchars($lead['city_name'] . ', ' . $lead['state_name']); ?></td>
-                                            <td>
-                                                <?php 
-                                                    $time = new DateTime($lead['follow_up_date']);
-                                                    echo $time->format('h:i A');
-                                                ?>
-                                            </td>
-                                            <td>
-                                                <a href="<?php echo APP_URL; ?>/leads/view/<?php echo $lead['id']; ?>" class="btn btn-sm btn-primary">
-                                                    <i class="fas fa-eye"></i> View
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-dashboard card-follow-up h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-0">Follow-ups</h6>
+                        <h2 class="mt-2 mb-0"><?php echo $stats['follow_ups']; ?></h2>
+                        <div class="small text-success mt-1">
+                            <i class="fas fa-arrow-up"></i> 2.15% since last week
                         </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Recent Call Logs -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header bg-info text-white">
-                    <h6 class="m-0 font-weight-bold"><i class="fas fa-phone-alt"></i> Recent Call Logs</h6>
-                </div>
-                <div class="card-body">
-                    <?php if (empty($recentCalls)): ?>
-                        <p class="text-center">No recent call logs found.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Lead</th>
-                                        <th>Status</th>
-                                        <th>Date/Time</th>
-                                        <th>By</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($recentCalls as $call): ?>
-                                        <tr>
-                                            <td>
-                                                <a href="<?php echo APP_URL; ?>/leads/view/<?php echo $call['lead_id']; ?>">
-                                                    <?php echo htmlspecialchars($call['lead_name']); ?>
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <?php
-                                                    $statusClass = '';
-                                                    switch ($call['status']) {
-                                                        case 'new':
-                                                            $statusClass = 'bg-primary';
-                                                            break;
-                                                        case 'follow_up':
-                                                            $statusClass = 'bg-warning';
-                                                            break;
-                                                        case 'interested':
-                                                            $statusClass = 'bg-info';
-                                                            break;
-                                                        case 'win':
-                                                            $statusClass = 'bg-success';
-                                                            break;
-                                                        case 'dead':
-                                                            $statusClass = 'bg-danger';
-                                                            break;
-                                                        default:
-                                                            $statusClass = 'bg-secondary';
-                                                    }
-                                                ?>
-                                                <span class="badge <?php echo $statusClass; ?>">
-                                                    <?php echo ucfirst(str_replace('_', ' ', $call['status'])); ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <?php 
-                                                    $time = new DateTime($call['created_at']);
-                                                    echo $time->format('M d, h:i A');
-                                                ?>
-                                            </td>
-                                            <td>
-                                                <?php echo isset($call['created_by_name']) ? htmlspecialchars($call['created_by_name']) : 'N/A'; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-calendar-alt text-warning fa-2x"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="row">
-        <!-- Performance Chart -->
-        <div class="col-lg-8 mb-4">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="m-0 font-weight-bold">
-                        <i class="fas fa-chart-line"></i> 
-                        <?php echo hasRole('administrator') ? 'Call Activity' : 'Your Call Activity'; ?>
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <canvas id="callActivityChart" width="100%" height="40"></canvas>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-dashboard card-interested h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-0">Interested</h6>
+                        <h2 class="mt-2 mb-0"><?php echo $stats['interested']; ?></h2>
+                        <div class="small text-success mt-1">
+                            <i class="fas fa-arrow-up"></i> 5.27% since last week
+                        </div>
+                    </div>
+                    <div class="bg-info bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-thumbs-up text-info fa-2x"></i>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Employee Performance -->
-        <div class="col-lg-4 mb-4">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h6 class="m-0 font-weight-bold">
-                        <i class="fas fa-chart-pie"></i> 
-                        <?php echo hasRole('administrator') ? 'Employee Performance' : 'Your Performance'; ?>
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <?php if (hasRole('administrator')): ?>
-                        <?php if (empty($employeeStats)): ?>
-                            <p class="text-center">No employee performance data available.</p>
-                        <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Employee</th>
-                                            <th>Leads</th>
-                                            <th>Wins</th>
-                                            <th>Conversion</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($employeeStats as $employee): ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($employee['name']); ?></td>
-                                                <td><?php echo $employee['total_leads']; ?></td>
-                                                <td><?php echo $employee['wins']; ?></td>
-                                                <td>
-                                                    <div class="progress">
-                                                        <div class="progress-bar bg-success" role="progressbar" 
-                                                            style="width: <?php echo $employee['conversion_rate']; ?>%" 
-                                                            aria-valuenow="<?php echo $employee['conversion_rate']; ?>" 
-                                                            aria-valuemin="0" aria-valuemax="100">
-                                                            <?php echo $employee['conversion_rate']; ?>%
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <?php if (empty($employeeStats)): ?>
-                            <p class="text-center">No performance data available.</p>
-                        <?php else: ?>
-                            <canvas id="conversionTrendChart" width="100%" height="300"></canvas>
-                        <?php endif; ?>
-                    <?php endif; ?>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card card-dashboard card-win h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-0">Wins</h6>
+                        <h2 class="mt-2 mb-0"><?php echo $stats['wins']; ?></h2>
+                        <div class="small text-success mt-1">
+                            <i class="fas fa-arrow-up"></i> 1.64% since last week
+                        </div>
+                    </div>
+                    <div class="bg-success bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-trophy text-success fa-2x"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<?php
-// Add extra JavaScript for charts
-$extraJs = '
+<!-- Charts & Tables -->
+<div class="row">
+    <!-- Lead Status Chart -->
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Lead Status Overview</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-link dropdown-toggle text-muted" type="button" id="chartDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="chartDropdown">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i> Export</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i> Refresh</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height:300px;">
+                    <canvas id="leadStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Today's Follow-ups -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Today's Follow-ups</h5>
+            </div>
+            <div class="card-body p-0">
+                <?php if (empty($todayFollowUps)): ?>
+                    <div class="text-center p-4">
+                        <i class="fas fa-calendar-check text-muted fa-3x mb-3"></i>
+                        <p class="mb-0">No follow-ups scheduled for today</p>
+                    </div>
+                <?php else: ?>
+                    <div class="list-group list-group-flush">
+                        <?php foreach ($todayFollowUps as $followUp): ?>
+                            <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1"><?php echo htmlspecialchars($followUp['name']); ?></h6>
+                                        <p class="mb-1 text-muted small">
+                                            <i class="fas fa-phone me-1"></i> <?php echo htmlspecialchars($followUp['phone']); ?>
+                                        </p>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-warning">
+                                            <i class="far fa-clock me-1"></i>
+                                            <?php echo date('h:i A', strtotime($followUp['follow_up_date'])); ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php if (!empty($todayFollowUps)): ?>
+                <div class="card-footer bg-white text-center">
+                    <a href="<?php echo APP_URL; ?>/leads?status=follow_up" class="btn btn-sm btn-outline-primary">View All Follow-ups</a>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Daily Call Activity -->
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Daily Call Activity</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" data-period="week">Week</button>
+                    <button type="button" class="btn btn-outline-secondary" data-period="month">Month</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height:300px;">
+                    <canvas id="dailyCallChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Call Logs -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Recent Call Logs</h5>
+            </div>
+            <div class="card-body p-0">
+                <?php if (empty($recentCalls)): ?>
+                    <div class="text-center p-4">
+                        <i class="fas fa-phone-slash text-muted fa-3x mb-3"></i>
+                        <p class="mb-0">No recent call logs found</p>
+                    </div>
+                <?php else: ?>
+                    <div class="list-group list-group-flush">
+                        <?php foreach ($recentCalls as $call): ?>
+                            <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $call['lead_id']; ?>" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1"><?php echo htmlspecialchars($call['lead_name']); ?></h6>
+                                        <p class="mb-1">
+                                            <?php echo getStatusBadge($call['status']); ?>
+                                        </p>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">
+                                            <?php echo date('M d, h:i A', strtotime($call['created_at'])); ?>
+                                        </small>
+                                    </div>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php if (!empty($recentCalls)): ?>
+                <div class="card-footer bg-white text-center">
+                    <a href="<?php echo APP_URL; ?>/reports/call-log" class="btn btn-sm btn-outline-primary">View All Calls</a>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<?php if (hasRole('administrator') && !empty($employeeStats)): ?>
+<div class="row">
+    <!-- Employee Performance -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Employee Performance</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Total Leads</th>
+                                <th>Wins</th>
+                                <th>Conversion Rate</th>
+                                <th>Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($employeeStats as $employee): ?>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="<?php echo APP_URL; ?>/assets/img/user-avatar.png" alt="User Avatar" class="user-avatar-sm me-2">
+                                            <div>
+                                                <?php echo htmlspecialchars($employee['name']); ?>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><?php echo $employee['total_leads']; ?></td>
+                                    <td><?php echo $employee['wins']; ?></td>
+                                    <td><?php echo $employee['conversion_rate']; ?>%</td>
+                                    <td>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: <?php echo $employee['conversion_rate']; ?>%;" aria-valuenow="<?php echo $employee['conversion_rate']; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white text-center">
+                <a href="<?php echo APP_URL; ?>/reports/employee-performance" class="btn btn-sm btn-outline-primary">View Detailed Report</a>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <script>
-    // Call Activity Chart
-    var ctx = document.getElementById("callActivityChart");
-    var callActivityChart = new Chart(ctx, {
-        type: "line",
+document.addEventListener('DOMContentLoaded', function() {
+    // Lead Status Chart
+    var leadStatusCtx = document.getElementById('leadStatusChart').getContext('2d');
+    var leadStatusChart = new Chart(leadStatusCtx, {
+        type: 'doughnut',
         data: {
-            labels: [' . implode(', ', array_map(function($item) { return '"' . $item['date'] . '"'; }, $dailyCallCount)) . '],
+            labels: ['New', 'Follow-up', 'Not Attend', 'Wrong Number', 'Other', 'Dead', 'Interested', 'Win'],
             datasets: [{
-                label: "Calls",
-                lineTension: 0.3,
-                backgroundColor: "rgba(78, 115, 223, 0.05)",
-                borderColor: "rgba(78, 115, 223, 1)",
-                pointRadius: 3,
-                pointBackgroundColor: "rgba(78, 115, 223, 1)",
-                pointBorderColor: "rgba(78, 115, 223, 1)",
-                pointHoverRadius: 3,
-                pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
-                pointHoverBorderColor: "rgba(78, 115, 223, 1)",
-                pointHitRadius: 10,
-                pointBorderWidth: 2,
-                data: [' . implode(', ', array_map(function($item) { return $item['count']; }, $dailyCallCount)) . '],
-            }],
-        },
-        options: {
-            maintainAspectRatio: false,
-            layout: {
-                padding: {
-                    left: 10,
-                    right: 25,
-                    top: 25,
-                    bottom: 0
-                }
-            },
-            scales: {
-                xAxes: [{
-                    time: {
-                        unit: "date"
-                    },
-                    gridLines: {
-                        display: false,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        maxTicksLimit: 7
-                    }
-                }],
-                yAxes: [{
-                    ticks: {
-                        maxTicksLimit: 5,
-                        padding: 10,
-                        beginAtZero: true
-                    },
-                    gridLines: {
-                        color: "rgb(234, 236, 244)",
-                        zeroLineColor: "rgb(234, 236, 244)",
-                        drawBorder: false,
-                        borderDash: [2],
-                        zeroLineBorderDash: [2]
-                    }
-                }],
-            },
-            legend: {
-                display: false
-            },
-            tooltips: {
-                backgroundColor: "rgb(255,255,255)",
-                bodyFontColor: "#858796",
-                titleMarginBottom: 10,
-                titleFontColor: "#6e707e",
-                titleFontSize: 14,
-                borderColor: "#dddfeb",
+                data: [
+                    <?php echo $stats['new_leads']; ?>,
+                    <?php echo $stats['follow_ups']; ?>,
+                    <?php echo $stats['not_attend']; ?>,
+                    <?php echo $stats['wrong_number']; ?>,
+                    <?php echo $stats['other']; ?>,
+                    <?php echo $stats['dead']; ?>,
+                    <?php echo $stats['interested']; ?>,
+                    <?php echo $stats['wins']; ?>
+                ],
+                backgroundColor: [
+                    'rgba(78, 115, 223, 0.8)',
+                    'rgba(246, 194, 62, 0.8)',
+                    'rgba(108, 117, 125, 0.8)',
+                    'rgba(231, 74, 59, 0.8)',
+                    'rgba(108, 117, 125, 0.8)',
+                    'rgba(231, 74, 59, 0.8)',
+                    'rgba(54, 185, 204, 0.8)',
+                    'rgba(28, 200, 138, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(78, 115, 223, 1)',
+                    'rgba(246, 194, 62, 1)',
+                    'rgba(108, 117, 125, 1)',
+                    'rgba(231, 74, 59, 1)',
+                    'rgba(108, 117, 125, 1)',
+                    'rgba(231, 74, 59, 1)',
+                    'rgba(54, 185, 204, 1)',
+                    'rgba(28, 200, 138, 1)'
+                ],
                 borderWidth: 1,
-                xPadding: 15,
-                yPadding: 15,
-                displayColors: false,
-                intersect: false,
-                mode: "index",
-                caretPadding: 10,
-            }
-        }
-    });
-';
-
-// Add conversion trend chart for employees
-if (!hasRole('administrator') && !empty($employeeStats)) {
-    $extraJs .= '
-    // Conversion Trend Chart
-    var ctxTrend = document.getElementById("conversionTrendChart");
-    var conversionTrendChart = new Chart(ctxTrend, {
-        type: "bar",
-        data: {
-            labels: [' . implode(', ', array_map(function($item) { return '"' . $item['month'] . '"'; }, $employeeStats)) . '],
-            datasets: [{
-                label: "Conversion Rate (%)",
-                backgroundColor: "rgba(40, 167, 69, 0.8)",
-                borderColor: "rgba(40, 167, 69, 1)",
-                data: [' . implode(', ', array_map(function($item) { return $item['conversion_rate']; }, $employeeStats)) . '],
-            }],
+                hoverOffset: 4
+            }]
         },
         options: {
+            responsive: true,
             maintainAspectRatio: false,
-            layout: {
-                padding: {
-                    left: 10,
-                    right: 25,
-                    top: 25,
-                    bottom: 0
-                }
-            },
-            scales: {
-                xAxes: [{
-                    gridLines: {
-                        display: false,
-                        drawBorder: false
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 15
                     }
-                }],
-                yAxes: [{
-                    ticks: {
-                        maxTicksLimit: 5,
-                        padding: 10,
-                        beginAtZero: true,
-                        callback: function(value) {return value + "%";}
-                    },
-                    gridLines: {
-                        color: "rgb(234, 236, 244)",
-                        zeroLineColor: "rgb(234, 236, 244)",
-                        drawBorder: false,
-                        borderDash: [2],
-                        zeroLineBorderDash: [2]
-                    }
-                }],
-            },
-            tooltips: {
-                callbacks: {
-                    label: function(tooltipItem, data) {
-                        return tooltipItem.yLabel + "%";
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.label || '';
+                            var value = context.raw || 0;
+                            var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            var percentage = Math.round((value / total) * 100);
+                            return label + ': ' + value + ' (' + percentage + '%)';
+                        }
                     }
                 }
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true
             }
         }
     });
-    ';
-}
-
-$extraJs .= '</script>';
-?>
+    
+    // Daily Call Chart
+    var dailyCallCtx = document.getElementById('dailyCallChart').getContext('2d');
+    var dailyCallChart = new Chart(dailyCallCtx, {
+        type: 'bar',
+        data: {
+            labels: [
+                <?php foreach ($dailyCallCount as $day): ?>
+                    '<?php echo date('M d', strtotime($day['date'])); ?>',
+                <?php endforeach; ?>
+            ],
+            datasets: [{
+                label: 'Calls',
+                data: [
+                    <?php foreach ($dailyCallCount as $day): ?>
+                        <?php echo $day['count']; ?>,
+                    <?php endforeach; ?>
+                ],
+                backgroundColor: 'rgba(78, 115, 223, 0.5)',
+                borderColor: 'rgba(78, 115, 223, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+                barThickness: 16
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        drawBorder: false,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        precision: 0
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    padding: 10,
+                    titleFont: {
+                        size: 14
+                    },
+                    bodyFont: {
+                        size: 13
+                    },
+                    displayColors: false
+                }
+            },
+            animation: {
+                duration: 1000
+            }
+        }
+    });
+    
+    // Refresh dashboard
+    document.getElementById('refreshDashboard').addEventListener('click', function() {
+        this.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
+        this.disabled = true;
+        
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    });
+    
+    // Period buttons for daily call chart
+    document.querySelectorAll('[data-period]').forEach(button => {
+        button.addEventListener('click', function() {
+            document.querySelectorAll('[data-period]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // In a real application, this would fetch new data based on the period
+            // For now, we'll just simulate a loading state
+            dailyCallChart.data.datasets[0].backgroundColor = 'rgba(200, 200, 200, 0.5)';
+            dailyCallChart.update();
+            
+            setTimeout(() => {
+                dailyCallChart.data.datasets[0].backgroundColor = 'rgba(78, 115, 223, 0.5)';
+                dailyCallChart.update();
+            }, 500);
+        });
+    });
+});
+</script>
 
 <?php include 'views/templates/footer.php'; ?>
 

@@ -1,9 +1,9 @@
 <?php
 /**
- * Base Model Class
+ * Base Model
  * 
- * This class provides common CRUD operations and audit trail functionality
- * for all models in the application.
+ * This is the base model class that all other models extend.
+ * It provides common functionality for database operations.
  */
 
 class Model {
@@ -17,347 +17,155 @@ class Model {
      * Constructor
      */
     public function __construct() {
-        require_once APP_ROOT . '/config/database.php';
-        $this->db = Database::getInstance();
+        global $db;
+        $this->db = $db;
     }
     
     /**
-     * Get all records with pagination
-     * 
-     * @param int $page
-     * @param int $perPage
-     * @param string $orderBy
-     * @param string $order
-     * @return array
-     */
-    public function getAll($page = 1, $perPage = RECORDS_PER_PAGE, $orderBy = 'id', $order = 'DESC') {
-        $offset = ($page - 1) * $perPage;
-        
-        $sql = "SELECT * FROM {$this->table} WHERE deleted_at IS NULL ORDER BY {$orderBy} {$order} LIMIT {$perPage} OFFSET {$offset}";
-        
-        return $this->db->fetchAll($sql);
-    }
-    
-    /**
-     * Count total records
-     * 
-     * @return int
-     */
-    public function count() {
-        $sql = "SELECT COUNT(*) as total FROM {$this->table} WHERE deleted_at IS NULL";
-        $result = $this->db->fetch($sql);
-        
-        return $result ? (int)$result['total'] : 0;
-    }
-    
-    /**
-     * Find record by ID
-     * 
-     * @param int $id
-     * @return array|bool
+     * Find a record by ID
      */
     public function find($id) {
-        $sql = "SELECT * FROM {$this->table} WHERE {$this->primaryKey} = :id AND deleted_at IS NULL";
-        
-        return $this->db->fetch($sql, ['id' => $id]);
+        $sql = "SELECT * FROM {$this->table} WHERE {$this->primaryKey} = ? AND deleted_at IS NULL";
+        return $this->db->getRow($sql, [$id]);
     }
     
     /**
-     * Find records by a specific field
-     * 
-     * @param string $field
-     * @param mixed $value
-     * @return array
+     * Get all records
      */
-    public function findBy($field, $value) {
-        $sql = "SELECT * FROM {$this->table} WHERE {$field} = :value AND deleted_at IS NULL";
-        
-        return $this->db->fetchAll($sql, ['value' => $value]);
+    public function getAll($page = 1, $limit = RECORDS_PER_PAGE) {
+        $offset = ($page - 1) * $limit;
+        $sql = "SELECT * FROM {$this->table} WHERE deleted_at IS NULL ORDER BY {$this->primaryKey} DESC LIMIT ?, ?";
+        return $this->db->getRows($sql, [$offset, $limit]);
     }
     
     /**
-     * Create a new record
-     * 
-     * @param array $data
-     * @return int|bool
+     * Get all active records
+     */
+    public function getAllActive() {
+        $sql = "SELECT * FROM {$this->table} WHERE status = 1 AND deleted_at IS NULL ORDER BY name ASC";
+        return $this->db->getRows($sql);
+    }
+    
+    /**
+     * Count all records
+     */
+    public function count() {
+        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE deleted_at IS NULL";
+        return $this->db->getValue($sql);
+    }
+    
+    /**
+     * Create a record
      */
     public function create($data) {
+        // Add audit trail fields
+        if (isLoggedIn()) {
+            $data['created_by'] = getCurrentUserId();
+        }
+        
         // Filter data to only include fillable fields
-        $data = array_intersect_key($data, array_flip($this->fillable));
+        $filteredData = array_intersect_key($data, array_flip($this->fillable));
         
-        // Add audit fields
-        if (isset($_SESSION['user_id'])) {
-            $data['created_by'] = $_SESSION['user_id'];
-            $data['updated_by'] = $_SESSION['user_id'];
+        // Insert record
+        $id = $this->db->insert($this->table, $filteredData);
+        
+        // Log audit
+        if ($this->auditEnabled) {
+            $this->logAudit('create', $id, null, $filteredData);
         }
         
-        // Prepare SQL
-        $fields = array_keys($data);
-        $placeholders = array_map(function($field) {
-            return ":{$field}";
-        }, $fields);
-        
-        $sql = "INSERT INTO {$this->table} (" . implode(', ', $fields) . ") 
-                VALUES (" . implode(', ', $placeholders) . ")";
-        
-        try {
-            $this->db->query($sql);
-            $this->db->bind($data);
-            $result = $this->db->execute();
-            
-            if ($result) {
-                $id = $this->db->lastInsertId();
-                
-                // Log to audit trail
-                if ($this->auditEnabled && isset($_SESSION['user_id'])) {
-                    $this->logAudit('create', $id, null, $data);
-                }
-                
-                return $id;
-            }
-            
-            return false;
-        } catch (PDOException $e) {
-            error_log('Create Error: ' . $e->getMessage());
-            return false;
-        }
+        return $id;
     }
     
     /**
      * Update a record
-     * 
-     * @param int $id
-     * @param array $data
-     * @return bool
      */
     public function update($id, $data) {
         // Get old values for audit
         $oldValues = $this->find($id);
         
-        if (!$oldValues) {
-            return false;
+        // Add audit trail fields
+        if (isLoggedIn()) {
+            $data['updated_by'] = getCurrentUserId();
         }
         
         // Filter data to only include fillable fields
-        $data = array_intersect_key($data, array_flip($this->fillable));
+        $filteredData = array_intersect_key($data, array_flip($this->fillable));
         
-        // Add audit fields
-        if (isset($_SESSION['user_id'])) {
-            $data['updated_by'] = $_SESSION['user_id'];
+        // Update record
+        $result = $this->db->update($this->table, $filteredData, "{$this->primaryKey} = ?", [$id]);
+        
+        // Log audit
+        if ($this->auditEnabled && $result) {
+            $this->logAudit('update', $id, $oldValues, $filteredData);
         }
         
-        // Prepare SQL
-        $setClause = array_map(function($field) {
-            return "{$field} = :{$field}";
-        }, array_keys($data));
-        
-        $sql = "UPDATE {$this->table} SET " . implode(', ', $setClause) . " 
-                WHERE {$this->primaryKey} = :id";
-        
-        $data['id'] = $id;
-        
-        try {
-            $this->db->query($sql);
-            $this->db->bind($data);
-            $result = $this->db->execute();
-            
-            // Log to audit trail
-            if ($result && $this->auditEnabled && isset($_SESSION['user_id'])) {
-                $this->logAudit('update', $id, $oldValues, $data);
-            }
-            
-            return $result;
-        } catch (PDOException $e) {
-            error_log('Update Error: ' . $e->getMessage());
-            return false;
-        }
+        return $result;
     }
     
     /**
-     * Soft delete a record
-     * 
-     * @param int $id
-     * @return bool
+     * Delete a record (soft delete)
      */
     public function delete($id) {
         // Get old values for audit
         $oldValues = $this->find($id);
         
-        if (!$oldValues) {
-            return false;
-        }
-        
+        // Soft delete
         $data = [
             'deleted_at' => date('Y-m-d H:i:s')
         ];
         
-        // Add audit fields
-        if (isset($_SESSION['user_id'])) {
-            $data['updated_by'] = $_SESSION['user_id'];
+        if (isLoggedIn()) {
+            $data['updated_by'] = getCurrentUserId();
         }
         
-        $sql = "UPDATE {$this->table} SET deleted_at = :deleted_at, updated_by = :updated_by 
-                WHERE {$this->primaryKey} = :id";
+        // Update record
+        $result = $this->db->update($this->table, $data, "{$this->primaryKey} = ?", [$id]);
         
-        $data['id'] = $id;
-        
-        try {
-            $this->db->query($sql);
-            $this->db->bind($data);
-            $result = $this->db->execute();
-            
-            // Log to audit trail
-            if ($result && $this->auditEnabled && isset($_SESSION['user_id'])) {
-                $this->logAudit('delete', $id, $oldValues, $data);
-            }
-            
-            return $result;
-        } catch (PDOException $e) {
-            error_log('Delete Error: ' . $e->getMessage());
-            return false;
+        // Log audit
+        if ($this->auditEnabled && $result) {
+            $this->logAudit('delete', $id, $oldValues, $data);
         }
+        
+        return $result;
     }
     
     /**
-     * Restore a soft-deleted record
-     * 
-     * @param int $id
-     * @return bool
+     * Toggle status
      */
-    public function restore($id) {
-        // Get old values for audit
-        $sql = "SELECT * FROM {$this->table} WHERE {$this->primaryKey} = :id";
-        $oldValues = $this->db->fetch($sql, ['id' => $id]);
+    public function toggleStatus($id) {
+        // Get current status
+        $record = $this->find($id);
         
-        if (!$oldValues) {
+        if (!$record) {
             return false;
+        }
+        
+        // Toggle status
+        $newStatus = $record['status'] == 1 ? 0 : 1;
+        
+        // Update record
+        return $this->update($id, ['status' => $newStatus]);
+    }
+    
+    /**
+     * Log audit
+     */
+    protected function logAudit($action, $recordId, $oldValues, $newValues) {
+        if (!isLoggedIn()) {
+            return;
         }
         
         $data = [
-            'deleted_at' => null
-        ];
-        
-        // Add audit fields
-        if (isset($_SESSION['user_id'])) {
-            $data['updated_by'] = $_SESSION['user_id'];
-        }
-        
-        $sql = "UPDATE {$this->table} SET deleted_at = NULL, updated_by = :updated_by 
-                WHERE {$this->primaryKey} = :id";
-        
-        $data['id'] = $id;
-        
-        try {
-            $this->db->query($sql);
-            $this->db->bind($data);
-            $result = $this->db->execute();
-            
-            // Log to audit trail
-            if ($result && $this->auditEnabled && isset($_SESSION['user_id'])) {
-                $this->logAudit('restore', $id, $oldValues, $data);
-            }
-            
-            return $result;
-        } catch (PDOException $e) {
-            error_log('Restore Error: ' . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Log action to audit trail
-     * 
-     * @param string $action
-     * @param int $recordId
-     * @param array $oldValues
-     * @param array $newValues
-     * @return bool
-     */
-    protected function logAudit($action, $recordId, $oldValues, $newValues) {
-        if (!isset($_SESSION['user_id'])) {
-            return false;
-        }
-        
-        $auditData = [
-            'user_id' => $_SESSION['user_id'],
+            'user_id' => getCurrentUserId(),
+            'action' => $action,
             'table_name' => $this->table,
             'record_id' => $recordId,
-            'action' => $action,
             'old_values' => $oldValues ? json_encode($oldValues) : null,
-            'new_values' => $newValues ? json_encode($newValues) : null,
-            'created_at' => date('Y-m-d H:i:s')
+            'new_values' => $newValues ? json_encode($newValues) : null
         ];
         
-        $fields = array_keys($auditData);
-        $placeholders = array_map(function($field) {
-            return ":{$field}";
-        }, $fields);
-        
-        $sql = "INSERT INTO audit_logs (" . implode(', ', $fields) . ") 
-                VALUES (" . implode(', ', $placeholders) . ")";
-        
-        try {
-            $this->db->query($sql);
-            $this->db->bind($auditData);
-            return $this->db->execute();
-        } catch (PDOException $e) {
-            error_log('Audit Log Error: ' . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Search records by keyword in specified fields
-     * 
-     * @param string $keyword
-     * @param array $fields
-     * @param int $page
-     * @param int $perPage
-     * @return array
-     */
-    public function search($keyword, $fields, $page = 1, $perPage = RECORDS_PER_PAGE) {
-        $offset = ($page - 1) * $perPage;
-        $conditions = [];
-        $params = [];
-        
-        foreach ($fields as $field) {
-            $conditions[] = "{$field} LIKE :keyword";
-        }
-        
-        $sql = "SELECT * FROM {$this->table} 
-                WHERE (" . implode(' OR ', $conditions) . ") 
-                AND deleted_at IS NULL 
-                LIMIT {$perPage} OFFSET {$offset}";
-        
-        $params['keyword'] = "%{$keyword}%";
-        
-        return $this->db->fetchAll($sql, $params);
-    }
-    
-    /**
-     * Count search results
-     * 
-     * @param string $keyword
-     * @param array $fields
-     * @return int
-     */
-    public function countSearch($keyword, $fields) {
-        $conditions = [];
-        $params = [];
-        
-        foreach ($fields as $field) {
-            $conditions[] = "{$field} LIKE :keyword";
-        }
-        
-        $sql = "SELECT COUNT(*) as total FROM {$this->table} 
-                WHERE (" . implode(' OR ', $conditions) . ") 
-                AND deleted_at IS NULL";
-        
-        $params['keyword'] = "%{$keyword}%";
-        
-        $result = $this->db->fetch($sql, $params);
-        
-        return $result ? (int)$result['total'] : 0;
+        $this->db->insert('audit_logs', $data);
     }
 }
 

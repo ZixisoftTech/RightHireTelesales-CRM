@@ -1,205 +1,155 @@
 <?php
 /**
- * Database Connection Class
+ * Database Connection
  * 
- * This file handles the database connection and provides methods for executing queries.
+ * This file handles the database connection using PDO.
  */
 
 class Database {
     private static $instance = null;
-    private $connection;
-    private $statement;
+    private $conn;
     
     /**
-     * Constructor - Creates a new PDO connection
+     * Constructor
      */
     private function __construct() {
         try {
-            $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4';
+            $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false
             ];
             
-            $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
+            $this->conn = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            // Log error and display user-friendly message
-            error_log('Database Connection Error: ' . $e->getMessage());
-            die('Database connection failed. Please contact the administrator.');
+            die('Database connection failed: ' . $e->getMessage());
         }
     }
     
     /**
-     * Get database instance (Singleton pattern)
-     * 
-     * @return Database
+     * Get database instance (singleton pattern)
      */
     public static function getInstance() {
         if (self::$instance === null) {
-            self::$instance = new Database();
+            self::$instance = new self();
         }
         
         return self::$instance;
     }
     
     /**
-     * Get PDO connection
-     * 
-     * @return PDO
+     * Get database connection
      */
     public function getConnection() {
-        return $this->connection;
+        return $this->conn;
     }
     
     /**
-     * Prepare a statement
-     * 
-     * @param string $sql
-     * @return Database
+     * Execute a query
      */
-    public function query($sql) {
-        $this->statement = $this->connection->prepare($sql);
-        return $this;
+    public function query($sql, $params = []) {
+        try {
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            return $stmt;
+        } catch (PDOException $e) {
+            die('Query failed: ' . $e->getMessage());
+        }
     }
     
     /**
-     * Bind values to prepared statement
-     * 
-     * @param array $params
-     * @return Database
+     * Get a single row
      */
-    public function bind($params) {
-        if (!empty($params) && is_array($params)) {
-            foreach ($params as $param => $value) {
-                $type = PDO::PARAM_STR;
-                
-                if (is_int($value)) {
-                    $type = PDO::PARAM_INT;
-                } elseif (is_bool($value)) {
-                    $type = PDO::PARAM_BOOL;
-                } elseif (is_null($value)) {
-                    $type = PDO::PARAM_NULL;
-                }
-                
-                if (is_int($param)) {
-                    // For numeric keys, use positional parameters
-                    $this->statement->bindValue($param + 1, $value, $type);
-                } else {
-                    // For string keys, use named parameters
-                    $this->statement->bindValue(':' . $param, $value, $type);
-                }
-            }
+    public function getRow($sql, $params = []) {
+        $stmt = $this->query($sql, $params);
+        return $stmt->fetch();
+    }
+    
+    /**
+     * Get multiple rows
+     */
+    public function getRows($sql, $params = []) {
+        $stmt = $this->query($sql, $params);
+        return $stmt->fetchAll();
+    }
+    
+    /**
+     * Get a single value
+     */
+    public function getValue($sql, $params = []) {
+        $stmt = $this->query($sql, $params);
+        return $stmt->fetchColumn();
+    }
+    
+    /**
+     * Insert a row
+     */
+    public function insert($table, $data) {
+        $columns = implode(', ', array_keys($data));
+        $placeholders = implode(', ', array_fill(0, count($data), '?'));
+        
+        $sql = "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})";
+        
+        $this->query($sql, array_values($data));
+        
+        return $this->conn->lastInsertId();
+    }
+    
+    /**
+     * Update a row
+     */
+    public function update($table, $data, $where, $whereParams = []) {
+        $set = [];
+        
+        foreach (array_keys($data) as $column) {
+            $set[] = "{$column} = ?";
         }
         
-        return $this;
+        $set = implode(', ', $set);
+        
+        $sql = "UPDATE {$table} SET {$set} WHERE {$where}";
+        
+        $params = array_merge(array_values($data), $whereParams);
+        
+        $stmt = $this->query($sql, $params);
+        
+        return $stmt->rowCount();
     }
     
     /**
-     * Execute the prepared statement
-     * 
-     * @return bool
+     * Delete a row
      */
-    public function execute() {
-        try {
-            return $this->statement->execute();
-        } catch (PDOException $e) {
-            error_log('Query Execution Error: ' . $e->getMessage());
-            throw $e; // Re-throw to be handled by the caller
-        }
-    }
-    
-    /**
-     * Execute a query and return all results
-     * 
-     * @param string $sql
-     * @param array $params
-     * @return array
-     */
-    public function fetchAll($sql, $params = []) {
-        try {
-            $this->query($sql);
-            $this->bind($params);
-            $this->execute();
-            return $this->statement->fetchAll();
-        } catch (PDOException $e) {
-            error_log('FetchAll Error: ' . $e->getMessage());
-            return [];
-        }
-    }
-    
-    /**
-     * Execute a query and return a single row
-     * 
-     * @param string $sql
-     * @param array $params
-     * @return array|bool
-     */
-    public function fetch($sql, $params = []) {
-        try {
-            $this->query($sql);
-            $this->bind($params);
-            $this->execute();
-            return $this->statement->fetch();
-        } catch (PDOException $e) {
-            error_log('Fetch Error: ' . $e->getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Execute a query and return the row count
-     * 
-     * @param string $sql
-     * @param array $params
-     * @return int
-     */
-    public function rowCount($sql, $params = []) {
-        try {
-            $this->query($sql);
-            $this->bind($params);
-            $this->execute();
-            return $this->statement->rowCount();
-        } catch (PDOException $e) {
-            error_log('RowCount Error: ' . $e->getMessage());
-            return 0;
-        }
-    }
-    
-    /**
-     * Get the last inserted ID
-     * 
-     * @return string
-     */
-    public function lastInsertId() {
-        return $this->connection->lastInsertId();
+    public function delete($table, $where, $whereParams = []) {
+        $sql = "DELETE FROM {$table} WHERE {$where}";
+        
+        $stmt = $this->query($sql, $whereParams);
+        
+        return $stmt->rowCount();
     }
     
     /**
      * Begin a transaction
-     * 
-     * @return bool
      */
     public function beginTransaction() {
-        return $this->connection->beginTransaction();
+        return $this->conn->beginTransaction();
     }
     
     /**
      * Commit a transaction
-     * 
-     * @return bool
      */
     public function commit() {
-        return $this->connection->commit();
+        return $this->conn->commit();
     }
     
     /**
      * Rollback a transaction
-     * 
-     * @return bool
      */
     public function rollback() {
-        return $this->connection->rollBack();
+        return $this->conn->rollBack();
     }
 }
+
+// Get database instance
+$db = Database::getInstance();
 

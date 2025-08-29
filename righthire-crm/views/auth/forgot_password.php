@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - <?php echo APP_NAME; ?></title>
+    <title>Forgot Password - <?php echo APP_NAME; ?></title>
     
     <!-- Favicon -->
     <link rel="shortcut icon" href="<?php echo APP_URL; ?>/assets/img/favicon.ico" type="image/x-icon">
@@ -25,8 +25,8 @@
         <div class="auth-content">
             <div class="text-center mb-4">
                 <img src="<?php echo APP_URL; ?>/assets/img/logo.png" alt="<?php echo APP_NAME; ?>" class="img-fluid mb-3" style="max-height: 80px;">
-                <h2 class="text-primary fw-bold">Welcome Back!</h2>
-                <p class="text-muted">Please login to your account</p>
+                <h2 class="text-primary fw-bold">Forgot Password</h2>
+                <p class="text-muted">Enter your email to reset your password</p>
             </div>
             
             <?php if (isset($errors) && !empty($errors)): ?>
@@ -42,7 +42,7 @@
             
             <?php echo displayFlashMessage(); ?>
             
-            <form method="POST" action="<?php echo APP_URL; ?>/auth/login" class="needs-validation" novalidate>
+            <form method="POST" action="<?php echo APP_URL; ?>/auth/forgot-password" class="needs-validation" novalidate>
                 <div class="mb-4">
                     <div class="form-floating">
                         <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
@@ -51,28 +51,16 @@
                     <div class="invalid-feedback">Please enter a valid email address.</div>
                 </div>
                 
-                <div class="mb-4">
-                    <div class="form-floating">
-                        <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
-                        <label for="password"><i class="fas fa-lock me-2"></i>Password</label>
-                    </div>
-                    <div class="invalid-feedback">Please enter your password.</div>
-                </div>
-                
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="remember" name="remember">
-                        <label class="form-check-label" for="remember">
-                            Remember me
-                        </label>
-                    </div>
-                    <a href="<?php echo APP_URL; ?>/auth/forgot-password" class="text-primary">Forgot password?</a>
-                </div>
-                
-                <div class="d-grid">
+                <div class="d-grid mb-4">
                     <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="fas fa-sign-in-alt me-2"></i> Login
+                        <i class="fas fa-paper-plane me-2"></i> Send Reset Link
                     </button>
+                </div>
+                
+                <div class="text-center">
+                    <a href="<?php echo APP_URL; ?>/auth/login" class="text-primary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Login
+                    </a>
                 </div>
             </form>
         </div>
@@ -102,7 +90,7 @@
                     } else {
                         // Add loading state to submit button
                         const submitBtn = form.querySelector('[type="submit"]');
-                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Logging in...';
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
                         submitBtn.disabled = true;
                     }
                     

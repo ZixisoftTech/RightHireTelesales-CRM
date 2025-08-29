@@ -2,245 +2,199 @@
 /**
  * User Model
  * 
- * This class handles user-related database operations.
+ * This model handles all user-related database operations.
  */
 
 require_once 'Model.php';
 
 class User extends Model {
     protected $table = 'users';
-    protected $fillable = [
-        'name', 'email', 'password', 'role', 'status', 
-        'created_by', 'created_at', 'updated_by', 'updated_at'
-    ];
-    
-    /**
-     * Find user by email
-     * 
-     * @param string $email
-     * @return array|bool
-     */
-    public function findByEmail($email) {
-        $sql = "SELECT * FROM {$this->table} WHERE email = :email AND deleted_at IS NULL";
-        
-        return $this->db->fetch($sql, ['email' => $email]);
-    }
+    protected $fillable = ['name', 'email', 'password', 'role', 'status', 'created_by', 'updated_by'];
     
     /**
      * Create a new user
-     * 
-     * @param array $data
-     * @return int|bool
      */
-    public function create($data) {
+    public function createUser($data) {
         // Hash password
         if (isset($data['password'])) {
-            $data['password'] = hashPassword($data['password']);
+            $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => PASSWORD_HASH_COST]);
         }
         
-        return parent::create($data);
+        return $this->create($data);
     }
     
     /**
      * Update a user
-     * 
-     * @param int $id
-     * @param array $data
-     * @return bool
      */
-    public function update($id, $data) {
-        // Hash password if provided
+    public function updateUser($id, $data) {
+        // Hash password
         if (isset($data['password']) && !empty($data['password'])) {
-            $data['password'] = hashPassword($data['password']);
-        } else {
-            // Don't update password if empty
+            $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => PASSWORD_HASH_COST]);
+        } elseif (isset($data['password']) && empty($data['password'])) {
             unset($data['password']);
         }
         
-        return parent::update($id, $data);
+        return $this->update($id, $data);
     }
     
     /**
-     * Authenticate user
-     * 
-     * @param string $email
-     * @param string $password
-     * @return array|bool
+     * Check if email exists
      */
-    public function authenticate($email, $password) {
-        $user = $this->findByEmail($email);
+    public function emailExists($email, $excludeId = null) {
+        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE email = ? AND deleted_at IS NULL";
+        $params = [$email];
         
-        if (!$user) {
-            return false;
+        if ($excludeId) {
+            $sql .= " AND id != ?";
+            $params[] = $excludeId;
         }
         
-        if (!verifyPassword($password, $user['password'])) {
-            return false;
-        }
-        
-        if ($user['status'] != 1) {
-            return false;
-        }
-        
-        return $user;
+        return $this->db->getValue($sql, $params) > 0;
     }
     
     /**
-     * Get all employees (role = 'employee')
-     * 
-     * @return array
+     * Get user by email
      */
-    public function getAllEmployees() {
-        $sql = "SELECT * FROM {$this->table} WHERE role = 'employee' AND deleted_at IS NULL";
+    public function getByEmail($email) {
+        $sql = "SELECT * FROM {$this->table} WHERE email = ? AND deleted_at IS NULL";
+        return $this->db->getRow($sql, [$email]);
+    }
+    
+    /**
+     * Get all users with lead count
+     */
+    public function getAllWithLeadCount($page = 1, $limit = RECORDS_PER_PAGE) {
+        $offset = ($page - 1) * $limit;
         
-        return $this->db->fetchAll($sql);
+        $sql = "SELECT u.*, COUNT(l.id) AS lead_count
+                FROM {$this->table} u
+                LEFT JOIN leads l ON u.id = l.assigned_to AND l.deleted_at IS NULL
+                WHERE u.deleted_at IS NULL
+                GROUP BY u.id
+                ORDER BY u.id DESC
+                LIMIT ?, ?";
+        
+        return $this->db->getRows($sql, [$offset, $limit]);
+    }
+    
+    /**
+     * Get all active employees
+     */
+    public function getAllActiveEmployees() {
+        $sql = "SELECT * FROM {$this->table} WHERE role = 'employee' AND status = 1 AND deleted_at IS NULL ORDER BY name ASC";
+        return $this->db->getRows($sql);
     }
     
     /**
      * Get employee territories
-     * 
-     * @param int $employeeId
-     * @return array
      */
-    public function getEmployeeTerritories($employeeId) {
-        $sql = "SELECT et.*, c.name as city_name, s.name as state_name 
+    public function getEmployeeTerritories($userId) {
+        $sql = "SELECT et.*, s.name AS state_name, c.name AS city_name
                 FROM employee_territories et
-                JOIN cities c ON et.city_id = c.id
-                JOIN states s ON c.state_id = s.id
-                WHERE et.employee_id = :employee_id AND et.deleted_at IS NULL";
+                JOIN states s ON et.state_id = s.id
+                LEFT JOIN cities c ON et.city_id = c.id
+                WHERE et.user_id = ? AND et.deleted_at IS NULL
+                ORDER BY s.name ASC, c.name ASC";
         
-        return $this->db->fetchAll($sql, ['employee_id' => $employeeId]);
+        return $this->db->getRows($sql, [$userId]);
     }
     
     /**
-     * Assign territory to employee
-     * 
-     * @param int $employeeId
-     * @param int $cityId
-     * @return bool
+     * Add employee territory
      */
-    public function assignTerritory($employeeId, $cityId) {
-        // Check if assignment already exists
-        $sql = "SELECT id FROM employee_territories 
-                WHERE employee_id = :employee_id AND city_id = :city_id AND deleted_at IS NULL";
-        
-        $existing = $this->db->fetch($sql, [
-            'employee_id' => $employeeId,
-            'city_id' => $cityId
-        ]);
-        
-        if ($existing) {
-            return true; // Already assigned
-        }
-        
+    public function addEmployeeTerritory($userId, $stateId, $cityId = null) {
         $data = [
-            'employee_id' => $employeeId,
+            'user_id' => $userId,
+            'state_id' => $stateId,
             'city_id' => $cityId,
-            'created_by' => $_SESSION['user_id'],
-            'created_at' => date('Y-m-d H:i:s')
+            'created_by' => getCurrentUserId()
         ];
         
-        $fields = array_keys($data);
-        $placeholders = array_map(function($field) {
-            return ":{$field}";
-        }, $fields);
-        
-        $sql = "INSERT INTO employee_territories (" . implode(', ', $fields) . ") 
-                VALUES (" . implode(', ', $placeholders) . ")";
-        
-        try {
-            $this->db->query($sql);
-            $this->db->bind($data);
-            return $this->db->execute();
-        } catch (PDOException $e) {
-            error_log('Assign Territory Error: ' . $e->getMessage());
-            return false;
-        }
+        return $this->db->insert('employee_territories', $data);
     }
     
     /**
-     * Remove territory from employee
-     * 
-     * @param int $employeeId
-     * @param int $cityId
-     * @return bool
+     * Remove employee territory
      */
-    public function removeTerritory($employeeId, $cityId) {
-        $sql = "UPDATE employee_territories 
-                SET deleted_at = :deleted_at, updated_by = :updated_by 
-                WHERE employee_id = :employee_id AND city_id = :city_id AND deleted_at IS NULL";
-        
+    public function removeEmployeeTerritory($id) {
         $data = [
             'deleted_at' => date('Y-m-d H:i:s'),
-            'updated_by' => $_SESSION['user_id'],
-            'employee_id' => $employeeId,
-            'city_id' => $cityId
+            'updated_by' => getCurrentUserId()
         ];
         
-        try {
-            $this->db->query($sql);
-            $this->db->bind($data);
-            return $this->db->execute();
-        } catch (PDOException $e) {
-            error_log('Remove Territory Error: ' . $e->getMessage());
-            return false;
-        }
+        return $this->db->update('employee_territories', $data, "id = ?", [$id]);
     }
     
     /**
-     * Check if user has access to a specific city
-     * 
-     * @param int $userId
-     * @param int $cityId
-     * @return bool
+     * Check if user has access to a state
      */
-    public function hasAccessToCity($userId, $cityId) {
-        // Administrators have access to all cities
-        $user = $this->find($userId);
-        if ($user && $user['role'] == 'administrator') {
+    public function hasAccessToState($userId, $stateId) {
+        if (hasRole('administrator')) {
             return true;
         }
         
-        // Check if employee has been assigned to this city
-        $sql = "SELECT id FROM employee_territories 
-                WHERE employee_id = :employee_id AND city_id = :city_id AND deleted_at IS NULL";
+        $sql = "SELECT COUNT(*) FROM employee_territories
+                WHERE user_id = ? AND state_id = ? AND deleted_at IS NULL";
         
-        $result = $this->db->fetch($sql, [
-            'employee_id' => $userId,
-            'city_id' => $cityId
-        ]);
-        
-        return $result ? true : false;
+        return $this->db->getValue($sql, [$userId, $stateId]) > 0;
     }
     
     /**
-     * Get cities accessible to a user
-     * 
-     * @param int $userId
-     * @return array
+     * Check if user has access to a city
      */
-    public function getAccessibleCities($userId) {
-        // Administrators have access to all cities
-        $user = $this->find($userId);
-        if ($user && $user['role'] == 'administrator') {
-            $sql = "SELECT c.*, s.name as state_name 
-                    FROM cities c
-                    JOIN states s ON c.state_id = s.id
-                    WHERE c.deleted_at IS NULL";
-            
-            return $this->db->fetchAll($sql);
+    public function hasAccessToCity($userId, $cityId) {
+        if (hasRole('administrator')) {
+            return true;
         }
         
-        // Get cities assigned to employee
-        $sql = "SELECT c.*, s.name as state_name 
-                FROM employee_territories et
-                JOIN cities c ON et.city_id = c.id
-                JOIN states s ON c.state_id = s.id
-                WHERE et.employee_id = :employee_id 
-                AND et.deleted_at IS NULL 
-                AND c.deleted_at IS NULL";
+        $sql = "SELECT c.state_id FROM cities c WHERE c.id = ?";
+        $stateId = $this->db->getValue($sql, [$cityId]);
         
-        return $this->db->fetchAll($sql, ['employee_id' => $userId]);
+        if (!$stateId) {
+            return false;
+        }
+        
+        $sql = "SELECT COUNT(*) FROM employee_territories
+                WHERE user_id = ? AND state_id = ? AND (city_id IS NULL OR city_id = ?) AND deleted_at IS NULL";
+        
+        return $this->db->getValue($sql, [$userId, $stateId, $cityId]) > 0;
+    }
+    
+    /**
+     * Get employee performance stats
+     */
+    public function getEmployeePerformanceStats() {
+        $sql = "SELECT u.id, u.name,
+                COUNT(l.id) AS total_leads,
+                SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) AS wins,
+                ROUND(SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) / COUNT(l.id) * 100, 2) AS conversion_rate
+                FROM users u
+                LEFT JOIN leads l ON u.id = l.assigned_to AND l.deleted_at IS NULL
+                WHERE u.role = 'employee' AND u.status = 1 AND u.deleted_at IS NULL
+                GROUP BY u.id
+                ORDER BY conversion_rate DESC, total_leads DESC";
+        
+        return $this->db->getRows($sql);
+    }
+    
+    /**
+     * Get employee performance trend
+     */
+    public function getEmployeePerformanceTrend($userId, $months = 6) {
+        $sql = "SELECT u.id, u.name,
+                DATE_FORMAT(l.created_at, '%Y-%m') AS month,
+                DATE_FORMAT(l.created_at, '%b %Y') AS month_name,
+                COUNT(l.id) AS total_leads,
+                SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) AS wins,
+                ROUND(SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) / COUNT(l.id) * 100, 2) AS conversion_rate
+                FROM users u
+                LEFT JOIN leads l ON u.id = l.assigned_to AND l.deleted_at IS NULL
+                WHERE u.id = ? AND u.deleted_at IS NULL
+                AND l.created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL ? MONTH)
+                GROUP BY u.id, month
+                ORDER BY month ASC";
+        
+        return $this->db->getRows($sql, [$userId, $months]);
     }
 }
 

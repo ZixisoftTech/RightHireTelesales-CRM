@@ -1,0 +1,269 @@
+<?php
+/**
+ * City Controller
+ * 
+ * This controller handles all city-related actions.
+ */
+
+require_once 'models/City.php';
+require_once 'models/State.php';
+
+class CityController {
+    private $cityModel;
+    private $stateModel;
+    
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        $this->cityModel = new City();
+        $this->stateModel = new State();
+    }
+    
+    /**
+     * Cities index page
+     */
+    public function index() {
+        // Require admin
+        requireAdmin();
+        
+        // Get cities with state name
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $cities = $this->cityModel->getAllWithStateName($page);
+        $totalCities = $this->cityModel->count();
+        $totalPages = ceil($totalCities / RECORDS_PER_PAGE);
+        
+        // Set page title
+        $pageTitle = 'Manage Cities';
+        
+        // Get current route
+        $route = isset($_GET['route']) ? $_GET['route'] : 'cities';
+        
+        // Include view
+        include 'views/cities/index.php';
+    }
+    
+    /**
+     * Create city page
+     */
+    public function create() {
+        // Require admin
+        requireAdmin();
+        
+        // Get all active states
+        $states = $this->stateModel->getAllActive();
+        
+        // Check if form is submitted
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Sanitize input
+            $stateId = (int)$_POST['state_id'];
+            $name = sanitizeInput($_POST['name']);
+            
+            // Validate input
+            $errors = [];
+            
+            if (empty($stateId)) {
+                $errors[] = 'State is required';
+            }
+            
+            if (empty($name)) {
+                $errors[] = 'Name is required';
+            } elseif ($this->cityModel->nameExistsInState($name, $stateId)) {
+                $errors[] = 'City name already exists in this state';
+            }
+            
+            // If no errors, create city
+            if (empty($errors)) {
+                $data = [
+                    'state_id' => $stateId,
+                    'name' => $name,
+                    'status' => 1
+                ];
+                
+                $result = $this->cityModel->create($data);
+                
+                if ($result) {
+                    setFlashMessage('success', 'City created successfully');
+                    redirect('cities');
+                    exit;
+                } else {
+                    $errors[] = 'Failed to create city';
+                }
+            }
+            
+            // If we get here, there were errors
+            $pageTitle = 'Create City';
+            $route = 'cities/create';
+            include 'views/cities/create.php';
+        } else {
+            // Display create form
+            $pageTitle = 'Create City';
+            $route = 'cities/create';
+            include 'views/cities/create.php';
+        }
+    }
+    
+    /**
+     * Edit city page
+     */
+    public function edit() {
+        // Require admin
+        requireAdmin();
+        
+        // Get city ID from URL
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        
+        if (!$id) {
+            setFlashMessage('error', 'Invalid city ID');
+            redirect('cities');
+            exit;
+        }
+        
+        // Get city
+        $city = $this->cityModel->find($id);
+        
+        if (!$city) {
+            setFlashMessage('error', 'City not found');
+            redirect('cities');
+            exit;
+        }
+        
+        // Get all active states
+        $states = $this->stateModel->getAllActive();
+        
+        // Check if form is submitted
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Sanitize input
+            $stateId = (int)$_POST['state_id'];
+            $name = sanitizeInput($_POST['name']);
+            
+            // Validate input
+            $errors = [];
+            
+            if (empty($stateId)) {
+                $errors[] = 'State is required';
+            }
+            
+            if (empty($name)) {
+                $errors[] = 'Name is required';
+            } elseif ($this->cityModel->nameExistsInState($name, $stateId, $id)) {
+                $errors[] = 'City name already exists in this state';
+            }
+            
+            // If no errors, update city
+            if (empty($errors)) {
+                $data = [
+                    'state_id' => $stateId,
+                    'name' => $name
+                ];
+                
+                $result = $this->cityModel->update($id, $data);
+                
+                if ($result) {
+                    setFlashMessage('success', 'City updated successfully');
+                    redirect('cities');
+                    exit;
+                } else {
+                    $errors[] = 'Failed to update city';
+                }
+            }
+            
+            // If we get here, there were errors
+            $pageTitle = 'Edit City';
+            $route = 'cities/edit';
+            include 'views/cities/edit.php';
+        } else {
+            // Display edit form
+            $pageTitle = 'Edit City';
+            $route = 'cities/edit';
+            include 'views/cities/edit.php';
+        }
+    }
+    
+    /**
+     * Delete city
+     */
+    public function delete() {
+        // Require admin
+        requireAdmin();
+        
+        // Get city ID from URL
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        
+        if (!$id) {
+            setFlashMessage('error', 'Invalid city ID');
+            redirect('cities');
+            exit;
+        }
+        
+        // Delete city
+        $result = $this->cityModel->delete($id);
+        
+        if ($result) {
+            setFlashMessage('success', 'City deleted successfully');
+        } else {
+            setFlashMessage('error', 'Failed to delete city');
+        }
+        
+        redirect('cities');
+        exit;
+    }
+    
+    /**
+     * Toggle city status
+     */
+    public function toggleStatus() {
+        // Require admin
+        requireAdmin();
+        
+        // Get city ID from URL
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        
+        if (!$id) {
+            setFlashMessage('error', 'Invalid city ID');
+            redirect('cities');
+            exit;
+        }
+        
+        // Toggle status
+        $result = $this->cityModel->toggleStatus($id);
+        
+        if ($result) {
+            setFlashMessage('success', 'City status updated successfully');
+        } else {
+            setFlashMessage('error', 'Failed to update city status');
+        }
+        
+        redirect('cities');
+        exit;
+    }
+    
+    /**
+     * Get cities by state (AJAX)
+     */
+    public function getByState() {
+        // Require login
+        requireLogin();
+        
+        // Get state ID from URL
+        $stateId = isset($_GET['state_id']) ? (int)$_GET['state_id'] : 0;
+        
+        if (!$stateId) {
+            echo json_encode(['error' => 'Invalid state ID']);
+            exit;
+        }
+        
+        // Get cities by state
+        if (hasRole('administrator')) {
+            $cities = $this->cityModel->getActiveByState($stateId);
+        } else {
+            $cities = $this->cityModel->getCitiesForEmployee(getCurrentUserId(), $stateId);
+        }
+        
+        // Return JSON response
+        header('Content-Type: application/json');
+        echo json_encode(['cities' => $cities]);
+        exit;
+    }
+}
+

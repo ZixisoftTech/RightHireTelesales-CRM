@@ -1,291 +1,424 @@
 /**
- * Right Hire CRM Custom JavaScript
+ * Right Hire CRM - Custom JavaScript
+ * Modern, interactive UI with micro-interactions
  */
 
 // Document Ready
-$(document).ready(function() {
-    // Initialize DataTables
-    if ($.fn.DataTable) {
-        $('.datatable').DataTable({
-            responsive: true,
-            pageLength: 25,
-            language: {
-                search: "_INPUT_",
-                searchPlaceholder: "Search..."
-            }
-        });
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    initTooltips();
     
-    // Initialize Tooltips
-    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    }
+    // Initialize animations
+    initAnimations();
     
-    // Initialize Popovers
-    if (typeof bootstrap !== 'undefined' && bootstrap.Popover) {
-        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-            return new bootstrap.Popover(popoverTriggerEl);
-        });
-    }
+    // Initialize form validations
+    initFormValidations();
     
-    // Confirm Delete
-    $('.confirm-delete').on('click', function(e) {
-        if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-            e.preventDefault();
-        }
-    });
+    // Initialize status-dependent fields
+    initStatusDependentFields();
     
-    // Toggle Status
-    $('.toggle-status').on('click', function(e) {
-        if (!confirm('Are you sure you want to change the status of this item?')) {
-            e.preventDefault();
-        }
-    });
+    // Initialize sidebar toggle
+    initSidebarToggle();
     
-    // Dynamic Form Fields
-    handleDynamicFormFields();
+    // Initialize card hover effects
+    initCardHoverEffects();
     
-    // CSV Import Preview
-    handleCsvImport();
+    // Initialize action button effects
+    initActionButtonEffects();
     
-    // Lead Status Change
-    handleLeadStatusChange();
-    
-    // City Dropdown Population
-    handleCityDropdown();
-    
-    // Print Button
-    $('.btn-print').on('click', function() {
-        window.print();
-    });
-    
-    // Export Button
-    $('.btn-export').on('click', function() {
-        var exportUrl = $(this).data('url');
-        if (exportUrl) {
-            window.location.href = exportUrl;
-        }
-    });
-    
-    // Form Submission Loading
-    $('form').on('submit', function() {
-        showLoading();
-    });
-    
-    // AJAX Loading
-    $(document).ajaxStart(function() {
-        showLoading();
-    }).ajaxStop(function() {
-        hideLoading();
-    });
+    // Initialize notification badges
+    initNotificationBadges();
 });
 
 /**
- * Handle dynamic form fields
+ * Initialize tooltips
  */
-function handleDynamicFormFields() {
-    // Show/hide fields based on lead status
-    $('#lead-status').on('change', function() {
-        var status = $(this).val();
-        
-        // Hide all conditional fields first
-        $('.conditional-field').hide();
-        
-        // Show fields based on selected status
-        if (status === 'follow_up') {
-            $('#follow-up-date-field').show();
-        } else if (status === 'other') {
-            $('#other-reason-field').show();
-        }
+function initTooltips() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl, {
+            trigger: 'hover'
+        });
+    });
+}
+
+/**
+ * Initialize animations
+ */
+function initAnimations() {
+    // Animate cards on page load
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
     });
     
-    // Trigger change event on page load
-    $('#lead-status').trigger('change');
-}
-
-/**
- * Handle CSV import preview
- */
-function handleCsvImport() {
-    $('#csv-file').on('change', function() {
-        var fileInput = this;
-        var fileName = fileInput.files[0]?.name || 'No file chosen';
-        
-        // Update file name display
-        $('.custom-file-label').text(fileName);
-        
-        // Enable/disable submit button
-        if (fileInput.files.length > 0) {
-            $('#import-submit').prop('disabled', false);
-        } else {
-            $('#import-submit').prop('disabled', true);
-        }
+    // Animate sidebar menu items
+    const menuItems = document.querySelectorAll('.sidebar ul li a');
+    menuItems.forEach((item, index) => {
+        item.style.transitionDelay = `${index * 0.05}s`;
     });
 }
 
 /**
- * Handle lead status change
+ * Initialize form validations
  */
-function handleLeadStatusChange() {
-    $('#status-form #status').on('change', function() {
-        var status = $(this).val();
-        
-        // Hide all conditional fields first
-        $('.status-conditional').hide();
-        
-        // Show fields based on selected status
-        if (status === 'follow_up') {
-            $('#follow-up-date-container').show();
-            $('#follow_up_date').prop('required', true);
-        } else {
-            $('#follow_up_date').prop('required', false);
-        }
-        
-        if (status === 'other') {
-            $('#other-reason-container').show();
-            $('#other_reason').prop('required', true);
-        } else {
-            $('#other_reason').prop('required', false);
-        }
-    });
+function initFormValidations() {
+    // Get all forms with the class 'needs-validation'
+    const forms = document.querySelectorAll('.needs-validation');
     
-    // Trigger change event on page load
-    $('#status-form #status').trigger('change');
-}
-
-/**
- * Handle city dropdown population based on selected state
- */
-function handleCityDropdown() {
-    $('#state_id').on('change', function() {
-        var stateId = $(this).val();
-        var cityDropdown = $('#city_id');
-        
-        if (stateId) {
-            // Show loading
-            cityDropdown.html('<option value="">Loading...</option>');
+    // Loop over them and prevent submission
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Show validation messages
+                const invalidFields = form.querySelectorAll(':invalid');
+                invalidFields.forEach(field => {
+                    field.classList.add('is-invalid');
+                    
+                    // Add shake animation to invalid fields
+                    field.classList.add('shake-animation');
+                    setTimeout(() => {
+                        field.classList.remove('shake-animation');
+                    }, 500);
+                });
+                
+                // Scroll to first invalid field
+                if (invalidFields.length > 0) {
+                    invalidFields[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    invalidFields[0].focus();
+                }
+                
+                // Show error toast
+                showToast('Please check the form for errors', 'error');
+            } else {
+                // Add loading state to submit button
+                const submitBtn = form.querySelector('[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+                    submitBtn.disabled = true;
+                }
+            }
             
-            // Fetch cities via AJAX
-            $.ajax({
-                url: APP_URL + '/api?api_route=cities&state_id=' + stateId,
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    // Clear dropdown
-                    cityDropdown.empty();
-                    
-                    // Add default option
-                    cityDropdown.append('<option value="">Select City</option>');
-                    
-                    // Add cities to dropdown
-                    if (response.cities && response.cities.length > 0) {
-                        $.each(response.cities, function(index, city) {
-                            cityDropdown.append('<option value="' + city.id + '">' + city.name + '</option>');
-                        });
-                    } else {
-                        cityDropdown.append('<option value="">No cities found</option>');
-                    }
-                },
-                error: function() {
-                    cityDropdown.html('<option value="">Error loading cities</option>');
+            form.classList.add('was-validated');
+        }, false);
+        
+        // Reset validation on input change
+        form.querySelectorAll('input, select, textarea').forEach(input => {
+            input.addEventListener('input', () => {
+                if (input.checkValidity()) {
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                } else {
+                    input.classList.remove('is-valid');
+                    input.classList.add('is-invalid');
                 }
             });
-        } else {
-            // Clear dropdown if no state selected
-            cityDropdown.html('<option value="">Select State First</option>');
+        });
+    });
+}
+
+/**
+ * Initialize status-dependent fields
+ */
+function initStatusDependentFields() {
+    const statusSelect = document.getElementById('status');
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            const status = this.value;
+            
+            // Hide all conditional fields first
+            document.querySelectorAll('.status-dependent').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Show relevant fields based on status
+            if (status === 'follow_up') {
+                document.getElementById('follow_up_date_group').style.display = 'block';
+            } else if (status === 'other') {
+                document.getElementById('other_reason_group').style.display = 'block';
+            }
+        });
+        
+        // Trigger change event on page load
+        statusSelect.dispatchEvent(new Event('change'));
+    }
+}
+
+/**
+ * Initialize sidebar toggle
+ */
+function initSidebarToggle() {
+    const sidebarCollapse = document.getElementById('sidebarCollapse');
+    const sidebarToggleBtn = document.querySelector('.sidebar-toggle-btn');
+    const sidebar = document.getElementById('sidebar');
+    const content = document.getElementById('content');
+    
+    if (sidebarCollapse) {
+        sidebarCollapse.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+            content.classList.toggle('active');
+        });
+    }
+    
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+            content.classList.toggle('active');
+        });
+    }
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(event) {
+        const isClickInsideSidebar = sidebar.contains(event.target);
+        const isClickInsideToggleBtn = sidebarCollapse && sidebarCollapse.contains(event.target);
+        
+        if (window.innerWidth < 768 && !isClickInsideSidebar && !isClickInsideToggleBtn && sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+            content.classList.remove('active');
         }
     });
-    
-    // Trigger change event if state is already selected (e.g., on edit form)
-    if ($('#state_id').val()) {
-        $('#state_id').trigger('change');
-    }
 }
 
 /**
- * Show loading spinner
+ * Initialize card hover effects
  */
-function showLoading() {
-    // Check if spinner already exists
-    if ($('.spinner-overlay').length === 0) {
-        var spinner = '<div class="spinner-overlay">' +
-                      '<div class="spinner-border text-primary" role="status">' +
-                      '<span class="visually-hidden">Loading...</span>' +
-                      '</div>' +
-                      '</div>';
+function initCardHoverEffects() {
+    const dashboardCards = document.querySelectorAll('.card-dashboard');
+    
+    dashboardCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.boxShadow = '0 0.5rem 1rem rgba(0, 0, 0, 0.15)';
+        });
         
-        $('body').append(spinner);
-    }
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1)';
+        });
+    });
 }
 
 /**
- * Hide loading spinner
+ * Initialize action button effects
  */
-function hideLoading() {
-    $('.spinner-overlay').remove();
+function initActionButtonEffects() {
+    const actionButtons = document.querySelectorAll('.btn-action');
+    
+    actionButtons.forEach(button => {
+        button.addEventListener('mousedown', function(e) {
+            const x = e.clientX - e.target.getBoundingClientRect().left;
+            const y = e.clientY - e.target.getBoundingClientRect().top;
+            
+            const ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+            ripple.style.left = `${x}px`;
+            ripple.style.top = `${y}px`;
+            
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+    
+    // Delete confirmation
+    const deleteButtons = document.querySelectorAll('.btn-delete');
+    
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const deleteUrl = this.getAttribute('href');
+            
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This action cannot be undone!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74a3b',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true,
+                focusCancel: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = deleteUrl;
+                }
+            });
+        });
+    });
 }
 
 /**
- * Format date for display
- * 
- * @param {string} dateString
- * @param {string} format
- * @return {string}
+ * Initialize notification badges
  */
-function formatDate(dateString, format = 'YYYY-MM-DD') {
-    if (!dateString) return '';
+function initNotificationBadges() {
+    const notificationBadges = document.querySelectorAll('.badge');
     
-    var date = new Date(dateString);
+    notificationBadges.forEach(badge => {
+        badge.classList.add('animate__animated', 'animate__pulse', 'animate__infinite');
+    });
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message, type = 'success') {
+    const iconMap = {
+        'success': 'fas fa-check-circle',
+        'error': 'fas fa-exclamation-circle',
+        'warning': 'fas fa-exclamation-triangle',
+        'info': 'fas fa-info-circle'
+    };
     
-    if (isNaN(date.getTime())) return dateString;
+    const bgColorMap = {
+        'success': '#1cc88a',
+        'error': '#e74a3b',
+        'warning': '#f6c23e',
+        'info': '#36b9cc'
+    };
     
-    var year = date.getFullYear();
-    var month = (date.getMonth() + 1).toString().padStart(2, '0');
-    var day = date.getDate().toString().padStart(2, '0');
-    var hours = date.getHours().toString().padStart(2, '0');
-    var minutes = date.getMinutes().toString().padStart(2, '0');
-    var seconds = date.getSeconds().toString().padStart(2, '0');
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.right = '20px';
+    toast.style.backgroundColor = bgColorMap[type];
+    toast.style.color = '#fff';
+    toast.style.padding = '12px 20px';
+    toast.style.borderRadius = '4px';
+    toast.style.boxShadow = '0 0.25rem 0.75rem rgba(0, 0, 0, 0.1)';
+    toast.style.display = 'flex';
+    toast.style.alignItems = 'center';
+    toast.style.zIndex = '9999';
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease-in-out';
     
-    format = format.replace('YYYY', year);
-    format = format.replace('MM', month);
-    format = format.replace('DD', day);
-    format = format.replace('HH', hours);
-    format = format.replace('mm', minutes);
-    format = format.replace('ss', seconds);
+    const icon = document.createElement('i');
+    icon.className = iconMap[type];
+    icon.style.marginRight = '10px';
     
-    return format;
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+    
+    toast.appendChild(icon);
+    toast.appendChild(messageSpan);
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.style.opacity = '1';
+    }, 10);
+    
+    // Animate out after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
+/**
+ * Format date
+ */
+function formatDate(date) {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(date).toLocaleDateString(undefined, options);
+}
+
+/**
+ * Format date and time
+ */
+function formatDateTime(dateTime) {
+    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return new Date(dateTime).toLocaleDateString(undefined, options);
+}
+
+/**
+ * Format currency
+ */
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
 
 /**
  * Format number with commas
- * 
- * @param {number} number
- * @return {string}
  */
 function formatNumber(number) {
-    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return new Intl.NumberFormat().format(number);
 }
 
 /**
- * Validate form
- * 
- * @param {HTMLFormElement} form
- * @return {boolean}
+ * Truncate text
  */
-function validateForm(form) {
-    // Check if HTML5 validation is supported
-    if (form.checkValidity) {
-        if (!form.checkValidity()) {
-            // Trigger HTML5 validation
-            $('<input type="submit">').hide().appendTo(form).click().remove();
-            return false;
+function truncateText(text, length = 50) {
+    if (text.length <= length) return text;
+    return text.substring(0, length) + '...';
+}
+
+/**
+ * Copy to clipboard
+ */
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard!', 'success');
+    }).catch(err => {
+        showToast('Failed to copy text', 'error');
+    });
+}
+
+/**
+ * Debounce function
+ */
+function debounce(func, wait = 300) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+/**
+ * Throttle function
+ */
+function throttle(func, limit = 300) {
+    let inThrottle;
+    return function executedFunction(...args) {
+        if (!inThrottle) {
+            func(...args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
         }
-    }
+    };
+}
+
+/**
+ * Get status badge HTML
+ */
+function getStatusBadge(status) {
+    const statusMap = {
+        'new': { class: 'bg-primary', icon: 'fas fa-user-plus' },
+        'follow_up': { class: 'bg-warning', icon: 'fas fa-calendar-alt' },
+        'not_attend': { class: 'bg-secondary', icon: 'fas fa-user-times' },
+        'wrong_number': { class: 'bg-danger', icon: 'fas fa-phone-slash' },
+        'other': { class: 'bg-secondary', icon: 'fas fa-question-circle' },
+        'dead': { class: 'bg-danger', icon: 'fas fa-skull' },
+        'interested': { class: 'bg-info', icon: 'fas fa-thumbs-up' },
+        'win': { class: 'bg-success', icon: 'fas fa-trophy' }
+    };
     
-    return true;
+    const statusInfo = statusMap[status] || { class: 'bg-secondary', icon: 'fas fa-question-circle' };
+    const statusText = status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    
+    return `<span class="badge ${statusInfo.class}"><i class="${statusInfo.icon} me-1"></i> ${statusText}</span>`;
 }
 

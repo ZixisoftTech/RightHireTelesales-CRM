@@ -2,218 +2,221 @@
 /**
  * Call Log Model
  * 
- * This class handles call log-related database operations.
+ * This model handles all call log-related database operations.
  */
 
 require_once 'Model.php';
 
 class CallLog extends Model {
     protected $table = 'call_logs';
-    protected $fillable = [
-        'lead_id', 'status', 'remarks', 'follow_up_date', 'created_by', 'created_at'
-    ];
-    protected $auditEnabled = false; // Disable audit trail for call logs
+    protected $fillable = ['lead_id', 'status', 'other_reason', 'follow_up_date', 'remarks', 'created_by', 'updated_by'];
     
     /**
-     * Get call logs by lead
-     * 
-     * @param int $leadId
-     * @return array
+     * Get call logs by lead ID
      */
-    public function getByLead($leadId) {
-        $sql = "SELECT cl.*, u.name as created_by_name 
+    public function getByLeadId($leadId) {
+        $sql = "SELECT cl.*, u.name AS created_by_name
                 FROM {$this->table} cl
-                JOIN users u ON cl.created_by = u.id
-                WHERE cl.lead_id = :lead_id
+                LEFT JOIN users u ON cl.created_by = u.id
+                WHERE cl.lead_id = ? AND cl.deleted_at IS NULL
                 ORDER BY cl.created_at DESC";
         
-        return $this->db->fetchAll($sql, ['lead_id' => $leadId]);
+        return $this->db->getRows($sql, [$leadId]);
     }
     
     /**
      * Get recent call logs
-     * 
-     * @param int $limit
-     * @return array
      */
     public function getRecent($limit = 10) {
-        $sql = "SELECT cl.*, 
-                l.name as lead_name, 
-                l.phone as lead_phone,
-                u.name as created_by_name
+        $sql = "SELECT cl.*, l.name AS lead_name, l.id AS lead_id, u.name AS created_by_name
                 FROM {$this->table} cl
                 JOIN leads l ON cl.lead_id = l.id
-                JOIN users u ON cl.created_by = u.id
-                ORDER BY cl.created_at DESC
-                LIMIT {$limit}";
+                LEFT JOIN users u ON cl.created_by = u.id
+                WHERE cl.deleted_at IS NULL";
         
-        return $this->db->fetchAll($sql);
-    }
-    
-    /**
-     * Get recent call logs by employee
-     * 
-     * @param int $employeeId
-     * @param int $limit
-     * @return array
-     */
-    public function getRecentByEmployee($employeeId, $limit = 10) {
-        $sql = "SELECT cl.*, 
-                l.name as lead_name, 
-                l.phone as lead_phone
-                FROM {$this->table} cl
-                JOIN leads l ON cl.lead_id = l.id
-                WHERE cl.created_by = :employee_id
-                ORDER BY cl.created_at DESC
-                LIMIT {$limit}";
+        // Apply territory restrictions for employees
+        if (!hasRole('administrator')) {
+            $userId = getCurrentUserId();
+            $sql .= " AND (
+                EXISTS (
+                    SELECT 1 FROM employee_territories et
+                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id IS NULL AND et.deleted_at IS NULL
+                )
+                OR
+                EXISTS (
+                    SELECT 1 FROM employee_territories et
+                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id = l.city_id AND et.deleted_at IS NULL
+                )
+            )";
+            $params = [$userId, $userId];
+        } else {
+            $params = [];
+        }
         
-        return $this->db->fetchAll($sql, ['employee_id' => $employeeId]);
+        $sql .= " ORDER BY cl.created_at DESC LIMIT ?";
+        $params[] = $limit;
+        
+        return $this->db->getRows($sql, $params);
     }
     
     /**
      * Get call logs by date range
-     * 
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
      */
-    public function getByDateRange($startDate, $endDate) {
-        $sql = "SELECT cl.*, 
-                l.name as lead_name, 
-                l.phone as lead_phone,
-                u.name as created_by_name
-                FROM {$this->table} cl
-                JOIN leads l ON cl.lead_id = l.id
-                JOIN users u ON cl.created_by = u.id
-                WHERE cl.created_at BETWEEN :start_date AND :end_date
-                ORDER BY cl.created_at DESC";
+    public function getByDateRange($dateFrom, $dateTo, $page = 1, $limit = RECORDS_PER_PAGE, $userId = null) {
+        $offset = ($page - 1) * $limit;
+        $where = "cl.deleted_at IS NULL";
+        $params = [];
         
-        return $this->db->fetchAll($sql, [
-            'start_date' => $startDate . ' 00:00:00',
-            'end_date' => $endDate . ' 23:59:59'
-        ]);
-    }
-    
-    /**
-     * Get call logs by employee and date range
-     * 
-     * @param int $employeeId
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
-     */
-    public function getByEmployeeAndDateRange($employeeId, $startDate, $endDate) {
-        $sql = "SELECT cl.*, 
-                l.name as lead_name, 
-                l.phone as lead_phone
-                FROM {$this->table} cl
-                JOIN leads l ON cl.lead_id = l.id
-                WHERE cl.created_by = :employee_id
-                AND cl.created_at BETWEEN :start_date AND :end_date
-                ORDER BY cl.created_at DESC";
-        
-        return $this->db->fetchAll($sql, [
-            'employee_id' => $employeeId,
-            'start_date' => $startDate . ' 00:00:00',
-            'end_date' => $endDate . ' 23:59:59'
-        ]);
-    }
-    
-    /**
-     * Count call logs by status
-     * 
-     * @param string $status
-     * @return int
-     */
-    public function countByStatus($status) {
-        $sql = "SELECT COUNT(*) as total FROM {$this->table} WHERE status = :status";
-        
-        $result = $this->db->fetch($sql, ['status' => $status]);
-        
-        return $result ? (int)$result['total'] : 0;
-    }
-    
-    /**
-     * Count call logs by employee and status
-     * 
-     * @param int $employeeId
-     * @param string $status
-     * @return int
-     */
-    public function countByEmployeeAndStatus($employeeId, $status) {
-        $sql = "SELECT COUNT(*) as total FROM {$this->table} 
-                WHERE created_by = :employee_id AND status = :status";
-        
-        $result = $this->db->fetch($sql, [
-            'employee_id' => $employeeId,
-            'status' => $status
-        ]);
-        
-        return $result ? (int)$result['total'] : 0;
-    }
-    
-    /**
-     * Get daily call count for the last n days
-     * 
-     * @param int $days
-     * @return array
-     */
-    public function getDailyCallCount($days = 7) {
-        $result = [];
-        $currentDate = new DateTime();
-        
-        for ($i = 0; $i < $days; $i++) {
-            $date = clone $currentDate;
-            $date->modify("-{$i} day");
-            $dateStr = $date->format('Y-m-d');
-            
-            $sql = "SELECT COUNT(*) as total FROM {$this->table} 
-                    WHERE DATE(created_at) = :date";
-            
-            $count = $this->db->fetch($sql, ['date' => $dateStr]);
-            
-            $result[] = [
-                'date' => $date->format('M d'),
-                'count' => $count ? (int)$count['total'] : 0
-            ];
+        if ($dateFrom) {
+            $where .= " AND DATE(cl.created_at) >= ?";
+            $params[] = $dateFrom;
         }
         
-        // Reverse to get chronological order
-        return array_reverse($result);
+        if ($dateTo) {
+            $where .= " AND DATE(cl.created_at) <= ?";
+            $params[] = $dateTo;
+        }
+        
+        if ($userId) {
+            $where .= " AND cl.created_by = ?";
+            $params[] = $userId;
+        }
+        
+        // Apply territory restrictions for employees
+        if (!hasRole('administrator')) {
+            $currentUserId = getCurrentUserId();
+            $where .= " AND (
+                EXISTS (
+                    SELECT 1 FROM employee_territories et
+                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id IS NULL AND et.deleted_at IS NULL
+                )
+                OR
+                EXISTS (
+                    SELECT 1 FROM employee_territories et
+                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id = l.city_id AND et.deleted_at IS NULL
+                )
+            )";
+            $params[] = $currentUserId;
+            $params[] = $currentUserId;
+        }
+        
+        $sql = "SELECT cl.*, l.name AS lead_name, l.id AS lead_id, u.name AS created_by_name
+                FROM {$this->table} cl
+                JOIN leads l ON cl.lead_id = l.id
+                LEFT JOIN users u ON cl.created_by = u.id
+                WHERE {$where}
+                ORDER BY cl.created_at DESC
+                LIMIT ?, ?";
+        
+        $params[] = $offset;
+        $params[] = $limit;
+        
+        return $this->db->getRows($sql, $params);
     }
     
     /**
-     * Get daily call count by employee for the last n days
-     * 
-     * @param int $employeeId
-     * @param int $days
-     * @return array
+     * Count call logs by date range
      */
-    public function getDailyCallCountByEmployee($employeeId, $days = 7) {
-        $result = [];
-        $currentDate = new DateTime();
+    public function countByDateRange($dateFrom, $dateTo, $userId = null) {
+        $where = "cl.deleted_at IS NULL";
+        $params = [];
         
-        for ($i = 0; $i < $days; $i++) {
-            $date = clone $currentDate;
-            $date->modify("-{$i} day");
-            $dateStr = $date->format('Y-m-d');
-            
-            $sql = "SELECT COUNT(*) as total FROM {$this->table} 
-                    WHERE DATE(created_at) = :date AND created_by = :employee_id";
-            
-            $count = $this->db->fetch($sql, [
-                'date' => $dateStr,
-                'employee_id' => $employeeId
-            ]);
-            
-            $result[] = [
-                'date' => $date->format('M d'),
-                'count' => $count ? (int)$count['total'] : 0
-            ];
+        if ($dateFrom) {
+            $where .= " AND DATE(cl.created_at) >= ?";
+            $params[] = $dateFrom;
         }
         
-        // Reverse to get chronological order
-        return array_reverse($result);
+        if ($dateTo) {
+            $where .= " AND DATE(cl.created_at) <= ?";
+            $params[] = $dateTo;
+        }
+        
+        if ($userId) {
+            $where .= " AND cl.created_by = ?";
+            $params[] = $userId;
+        }
+        
+        // Apply territory restrictions for employees
+        if (!hasRole('administrator')) {
+            $currentUserId = getCurrentUserId();
+            $where .= " AND (
+                EXISTS (
+                    SELECT 1 FROM employee_territories et
+                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id IS NULL AND et.deleted_at IS NULL
+                )
+                OR
+                EXISTS (
+                    SELECT 1 FROM employee_territories et
+                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id = l.city_id AND et.deleted_at IS NULL
+                )
+            )";
+            $params[] = $currentUserId;
+            $params[] = $currentUserId;
+        }
+        
+        $sql = "SELECT COUNT(*)
+                FROM {$this->table} cl
+                JOIN leads l ON cl.lead_id = l.id
+                WHERE {$where}";
+        
+        return $this->db->getValue($sql, $params);
+    }
+    
+    /**
+     * Get call log stats by date range
+     */
+    public function getStatsByDateRange($dateFrom, $dateTo, $userId = null) {
+        $where = "cl.deleted_at IS NULL";
+        $params = [];
+        
+        if ($dateFrom) {
+            $where .= " AND DATE(cl.created_at) >= ?";
+            $params[] = $dateFrom;
+        }
+        
+        if ($dateTo) {
+            $where .= " AND DATE(cl.created_at) <= ?";
+            $params[] = $dateTo;
+        }
+        
+        if ($userId) {
+            $where .= " AND cl.created_by = ?";
+            $params[] = $userId;
+        }
+        
+        // Apply territory restrictions for employees
+        if (!hasRole('administrator')) {
+            $currentUserId = getCurrentUserId();
+            $where .= " AND (
+                EXISTS (
+                    SELECT 1 FROM employee_territories et
+                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id IS NULL AND et.deleted_at IS NULL
+                )
+                OR
+                EXISTS (
+                    SELECT 1 FROM employee_territories et
+                    WHERE et.user_id = ? AND et.state_id = l.state_id AND et.city_id = l.city_id AND et.deleted_at IS NULL
+                )
+            )";
+            $params[] = $currentUserId;
+            $params[] = $currentUserId;
+        }
+        
+        $sql = "SELECT
+                COUNT(*) AS total_calls,
+                SUM(CASE WHEN cl.status = 'new' THEN 1 ELSE 0 END) AS new_calls,
+                SUM(CASE WHEN cl.status = 'follow_up' THEN 1 ELSE 0 END) AS follow_ups,
+                SUM(CASE WHEN cl.status = 'not_attend' THEN 1 ELSE 0 END) AS not_attend,
+                SUM(CASE WHEN cl.status = 'wrong_number' THEN 1 ELSE 0 END) AS wrong_number,
+                SUM(CASE WHEN cl.status = 'other' THEN 1 ELSE 0 END) AS other,
+                SUM(CASE WHEN cl.status = 'dead' THEN 1 ELSE 0 END) AS dead,
+                SUM(CASE WHEN cl.status = 'interested' THEN 1 ELSE 0 END) AS interested,
+                SUM(CASE WHEN cl.status = 'win' THEN 1 ELSE 0 END) AS wins
+                FROM {$this->table} cl
+                JOIN leads l ON cl.lead_id = l.id
+                WHERE {$where}";
+        
+        return $this->db->getRow($sql, $params);
     }
 }
 

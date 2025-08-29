@@ -2,7 +2,7 @@
 /**
  * Authentication Functions
  * 
- * This file contains functions for authentication and authorization.
+ * This file contains all the authentication related functions.
  */
 
 /**
@@ -11,42 +11,31 @@
  * @return bool
  */
 function isLoggedIn() {
-    return isset($_SESSION['user_id']);
+    return isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true;
 }
 
 /**
- * Check if user has a specific role
- * 
- * @param string $role
- * @return bool
- */
-function hasRole($role) {
-    return isLoggedIn() && $_SESSION['role'] == $role;
-}
-
-/**
- * Require user to be logged in
+ * Require login
  * 
  * @return void
  */
 function requireLogin() {
     if (!isLoggedIn()) {
-        setFlashMessage('error', 'Please log in to access this page');
+        setFlashMessage('error', 'You must be logged in to access this page');
         redirect('auth/login');
         exit;
     }
 }
 
 /**
- * Require user to have a specific role
+ * Require admin role
  * 
- * @param string $role
  * @return void
  */
-function requireRole($role) {
+function requireAdmin() {
     requireLogin();
     
-    if ($_SESSION['role'] != $role) {
+    if (!hasRole('administrator')) {
         setFlashMessage('error', 'You do not have permission to access this page');
         redirect('dashboard');
         exit;
@@ -54,60 +43,69 @@ function requireRole($role) {
 }
 
 /**
- * Hash password using bcrypt
+ * Get current user ID
  * 
- * @param string $password
- * @return string
+ * @return int|null
  */
-function hashPassword($password) {
-    return password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+function getCurrentUserId() {
+    return isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 }
 
 /**
- * Verify password against hash
+ * Get current user name
  * 
- * @param string $password
- * @param string $hash
- * @return bool
+ * @return string|null
  */
-function verifyPassword($password, $hash) {
-    return password_verify($password, $hash);
+function getCurrentUserName() {
+    return isset($_SESSION['user_name']) ? $_SESSION['user_name'] : null;
 }
 
 /**
- * Generate CSRF token
+ * Get current user email
  * 
- * @return string
+ * @return string|null
  */
-function generateCsrfToken() {
-    if (!isset($_SESSION[CSRF_TOKEN_NAME])) {
-        $_SESSION[CSRF_TOKEN_NAME] = bin2hex(random_bytes(32));
-    }
+function getCurrentUserEmail() {
+    return isset($_SESSION['user_email']) ? $_SESSION['user_email'] : null;
+}
+
+/**
+ * Get current user role
+ * 
+ * @return string|null
+ */
+function getCurrentUserRole() {
+    return isset($_SESSION['role']) ? $_SESSION['role'] : null;
+}
+
+/**
+ * Login user
+ * 
+ * @param array $user
+ * @return void
+ */
+function loginUser($user) {
+    $_SESSION['authenticated'] = true;
+    $_SESSION['user_id'] = $user['id'];
+    $_SESSION['user_name'] = $user['name'];
+    $_SESSION['user_email'] = $user['email'];
+    $_SESSION['role'] = $user['role'];
+}
+
+/**
+ * Logout user
+ * 
+ * @return void
+ */
+function logoutUser() {
+    // Unset all session variables
+    $_SESSION = [];
     
-    return $_SESSION[CSRF_TOKEN_NAME];
-}
-
-/**
- * Verify CSRF token
- * 
- * @param string $token
- * @return bool
- */
-function verifyCsrfToken($token) {
-    if (!isset($_SESSION[CSRF_TOKEN_NAME]) || empty($token)) {
-        return false;
-    }
+    // Destroy the session
+    session_destroy();
     
-    return hash_equals($_SESSION[CSRF_TOKEN_NAME], $token);
-}
-
-/**
- * Regenerate CSRF token
- * 
- * @return string
- */
-function regenerateCsrfToken() {
-    $_SESSION[CSRF_TOKEN_NAME] = bin2hex(random_bytes(32));
-    return $_SESSION[CSRF_TOKEN_NAME];
+    // Regenerate session ID
+    session_start();
+    session_regenerate_id(true);
 }
 

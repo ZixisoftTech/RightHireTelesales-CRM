@@ -103,6 +103,18 @@ class User extends Model {
      * Add employee territory
      */
     public function addEmployeeTerritory($userId, $stateId, $cityId = null) {
+        // Check if a soft-deleted territory exists with the same combination
+        $checkSql = "SELECT id FROM employee_territories 
+                    WHERE user_id = ? AND state_id = ? AND (city_id = ? OR (city_id IS NULL AND ? IS NULL))
+                    AND deleted_at IS NOT NULL";
+        $checkParams = [$userId, $stateId, $cityId, $cityId];
+        $existingId = $this->db->getValue($checkSql, $checkParams);
+        
+        if ($existingId) {
+            // Hard delete the existing soft-deleted record first
+            $this->hardDeleteTerritory($existingId);
+        }
+        
         $data = [
             'user_id' => $userId,
             'state_id' => $stateId,
@@ -117,12 +129,22 @@ class User extends Model {
      * Remove employee territory
      */
     public function removeEmployeeTerritory($id) {
-        $data = [
-            'deleted_at' => date('Y-m-d H:i:s'),
-            'updated_by' => getCurrentUserId()
-        ];
-        
-        return $this->db->update('employee_territories', $data, "id = ?", [$id]);
+        return $this->hardDeleteTerritory($id);
+    }
+    
+    /**
+     * Hard delete a territory
+     * 
+     * This method completely removes a territory from the database
+     * instead of just marking it as deleted.
+     * 
+     * @param int $id Territory ID
+     * @return bool Success or failure
+     */
+    public function hardDeleteTerritory($id) {
+        $sql = "DELETE FROM employee_territories WHERE id = ?";
+        $this->db->query($sql, [$id]);
+        return true;
     }
     
     /**

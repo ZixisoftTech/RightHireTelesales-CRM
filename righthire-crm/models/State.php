@@ -67,6 +67,21 @@ class State extends Model {
     }
     
     /**
+     * Check for soft-deleted duplicate state
+     * 
+     * @param array $data State data
+     * @return int|null ID of soft-deleted duplicate or null if none exists
+     */
+    public function checkSoftDeletedDuplicate($data) {
+        if (!isset($data['name'])) {
+            return null;
+        }
+        
+        $sql = "SELECT id FROM {$this->table} WHERE name = ? AND deleted_at IS NOT NULL";
+        return $this->db->getValue($sql, [$data['name']]);
+    }
+    
+    /**
      * Hard delete a state
      * 
      * This method completely removes a state from the database

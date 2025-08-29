@@ -86,6 +86,21 @@ class City extends Model {
     }
     
     /**
+     * Check for soft-deleted duplicate city
+     * 
+     * @param array $data City data
+     * @return int|null ID of soft-deleted duplicate or null if none exists
+     */
+    public function checkSoftDeletedDuplicate($data) {
+        if (!isset($data['name']) || !isset($data['state_id'])) {
+            return null;
+        }
+        
+        $sql = "SELECT id FROM {$this->table} WHERE name = ? AND state_id = ? AND deleted_at IS NOT NULL";
+        return $this->db->getValue($sql, [$data['name'], $data['state_id']]);
+    }
+    
+    /**
      * Hard delete a city
      * 
      * This method completely removes a city from the database

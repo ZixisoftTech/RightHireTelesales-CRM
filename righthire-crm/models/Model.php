@@ -58,6 +58,15 @@ class Model {
      * Create a record
      */
     public function create($data) {
+        // Check for soft-deleted record with same unique constraint
+        if (method_exists($this, 'checkSoftDeletedDuplicate')) {
+            $softDeletedId = $this->checkSoftDeletedDuplicate($data);
+            if ($softDeletedId) {
+                // Hard delete the soft-deleted record first
+                $this->hardDelete($softDeletedId);
+            }
+        }
+        
         // Add audit trail fields
         if (isLoggedIn()) {
             $data['created_by'] = getCurrentUserId();
@@ -128,6 +137,31 @@ class Model {
         }
         
         return $result;
+    }
+    
+    /**
+     * Hard delete a record
+     * 
+     * This method completely removes a record from the database
+     * instead of just marking it as deleted.
+     * 
+     * @param int $id Record ID
+     * @return bool Success or failure
+     */
+    public function hardDelete($id) {
+        // Get old values for audit
+        $oldValues = $this->find($id);
+        
+        // Hard delete
+        $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = ?";
+        $result = $this->db->query($sql, [$id]);
+        
+        // Log audit
+        if ($this->auditEnabled && $oldValues) {
+            $this->logAudit('hard_delete', $id, $oldValues, null);
+        }
+        
+        return true;
     }
     
     /**

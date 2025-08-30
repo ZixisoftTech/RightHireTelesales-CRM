@@ -9,7 +9,14 @@ require_once 'Model.php';
 
 class Lead extends Model {
     protected $table = 'leads';
-    protected $fillable = ['name', 'email', 'phone', 'address', 'state_id', 'city_id', 'status', 'other_reason', 'follow_up_date', 'remarks', 'assigned_to', 'created_by', 'updated_by'];
+    protected $fillable = ['name', 'email', 'phone', 'address', 'state_id', 'city_id', 'status', 'other_reason', 'follow_up_date', 'remarks', 'assigned_to'];
+    
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        parent::__construct();
+    }
     
     /**
      * Get all leads with related data
@@ -17,7 +24,7 @@ class Lead extends Model {
     public function getAllWithRelatedData($page = 1, $limit = RECORDS_PER_PAGE) {
         $offset = ($page - 1) * $limit;
         
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS assigned_to_name
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
@@ -30,115 +37,10 @@ class Lead extends Model {
     }
     
     /**
-     * Get leads for employee
-     */
-    public function getLeadsForEmployee($userId, $page = 1, $limit = RECORDS_PER_PAGE) {
-        $offset = ($page - 1) * $limit;
-        
-        // Check if user has any territories
-        $sql = "SELECT COUNT(*) FROM employee_territories 
-                WHERE user_id = ? AND deleted_at IS NULL";
-        
-        $hasTerritory = $this->db->getValue($sql, [$userId]) > 0;
-        
-        if (!$hasTerritory) {
-            // If user has no territories, return empty array
-            return [];
-        }
-        
-        // Get territories for user
-        $territorySql = "SELECT state_id, city_id FROM employee_territories WHERE user_id = ? AND deleted_at IS NULL";
-        $territories = $this->db->getRows($territorySql, [$userId]);
-        
-        // Build query conditions for territories
-        $conditions = [];
-        $params = [];
-        
-        foreach ($territories as $territory) {
-            if ($territory['city_id']) {
-                // Territory with specific city
-                $conditions[] = "(l.state_id = ? AND l.city_id = ?)";
-                $params[] = $territory['state_id'];
-                $params[] = $territory['city_id'];
-            } else {
-                // Territory with entire state
-                $conditions[] = "(l.state_id = ?)";
-                $params[] = $territory['state_id'];
-            }
-        }
-        
-        // Add assigned leads
-        $conditions[] = "(l.assigned_to = ?)";
-        $params[] = $userId;
-        
-        // Build final query
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS assigned_to_name
-                FROM {$this->table} l
-                LEFT JOIN states s ON l.state_id = s.id
-                LEFT JOIN cities c ON l.city_id = c.id
-                LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.deleted_at IS NULL AND (" . implode(" OR ", $conditions) . ")
-                ORDER BY l.id DESC
-                LIMIT ?, ?";
-        
-        $params[] = $offset;
-        $params[] = $limit;
-        
-        return $this->db->getRows($sql, $params);
-    }
-    
-    /**
-     * Count leads for employee
-     */
-    public function countLeadsForEmployee($userId) {
-        // Check if user has any territories
-        $sql = "SELECT COUNT(*) FROM employee_territories 
-                WHERE user_id = ? AND deleted_at IS NULL";
-        
-        $hasTerritory = $this->db->getValue($sql, [$userId]) > 0;
-        
-        if (!$hasTerritory) {
-            // If user has no territories, return 0
-            return 0;
-        }
-        
-        // Get territories for user
-        $territorySql = "SELECT state_id, city_id FROM employee_territories WHERE user_id = ? AND deleted_at IS NULL";
-        $territories = $this->db->getRows($territorySql, [$userId]);
-        
-        // Build query conditions for territories
-        $conditions = [];
-        $params = [];
-        
-        foreach ($territories as $territory) {
-            if ($territory['city_id']) {
-                // Territory with specific city
-                $conditions[] = "(l.state_id = ? AND l.city_id = ?)";
-                $params[] = $territory['state_id'];
-                $params[] = $territory['city_id'];
-            } else {
-                // Territory with entire state
-                $conditions[] = "(l.state_id = ?)";
-                $params[] = $territory['state_id'];
-            }
-        }
-        
-        // Add assigned leads
-        $conditions[] = "(l.assigned_to = ?)";
-        $params[] = $userId;
-        
-        // Build final query
-        $sql = "SELECT COUNT(*) FROM {$this->table} l
-                WHERE l.deleted_at IS NULL AND (" . implode(" OR ", $conditions) . ")";
-        
-        return $this->db->getValue($sql, $params);
-    }
-    
-    /**
      * Get lead by ID with related data
      */
     public function getByIdWithRelatedData($id) {
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS assigned_to_name
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
@@ -149,295 +51,51 @@ class Lead extends Model {
     }
     
     /**
-     * Get call logs for lead
-     */
-    public function getCallLogs($leadId) {
-        $sql = "SELECT cl.*, u.name AS employee_name
-                FROM call_logs cl
-                LEFT JOIN users u ON cl.created_by = u.id
-                WHERE cl.lead_id = ? AND cl.deleted_at IS NULL
-                ORDER BY cl.created_at DESC";
-        
-        return $this->db->getRows($sql, [$leadId]);
-    }
-    
-    /**
-     * Add call log
-     */
-    public function addCallLog($leadId, $status, $otherReason = null, $followUpDate = null, $remarks = null) {
-        $data = [
-            'lead_id' => $leadId,
-            'status' => $status,
-            'other_reason' => $otherReason,
-            'follow_up_date' => $followUpDate,
-            'remarks' => $remarks,
-            'created_by' => getCurrentUserId()
-        ];
-        
-        return $this->db->insert('call_logs', $data);
-    }
-    
-    /**
-     * Update lead status
-     */
-    public function updateStatus($id, $status, $otherReason = null, $followUpDate = null, $remarks = null) {
-        $data = [
-            'status' => $status,
-            'updated_by' => getCurrentUserId()
-        ];
-        
-        if ($status === 'other') {
-            $data['other_reason'] = $otherReason;
-        } else {
-            $data['other_reason'] = null;
-        }
-        
-        if ($status === 'follow_up') {
-            $data['follow_up_date'] = $followUpDate;
-        } else {
-            $data['follow_up_date'] = null;
-        }
-        
-        $result = $this->update($id, $data);
-        
-        if ($result) {
-            // Add call log
-            $this->addCallLog($id, $status, $otherReason, $followUpDate, $remarks);
-        }
-        
-        return $result;
-    }
-    
-    /**
-     * Get leads by status
-     */
-    public function getByStatus($status, $limit = 5) {
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS assigned_to_name
-                FROM {$this->table} l
-                LEFT JOIN states s ON l.state_id = s.id
-                LEFT JOIN cities c ON l.city_id = c.id
-                LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.status = ? AND l.deleted_at IS NULL
-                ORDER BY l.id DESC
-                LIMIT ?";
-        
-        return $this->db->getRows($sql, [$status, $limit]);
-    }
-    
-    /**
-     * Get follow-up leads
-     */
-    public function getFollowUpLeads($limit = 5) {
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS assigned_to_name
-                FROM {$this->table} l
-                LEFT JOIN states s ON l.state_id = s.id
-                LEFT JOIN cities c ON l.city_id = c.id
-                LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.status = 'follow_up' AND l.follow_up_date <= NOW() AND l.deleted_at IS NULL
-                ORDER BY l.follow_up_date ASC
-                LIMIT ?";
-        
-        return $this->db->getRows($sql, [$limit]);
-    }
-    
-    /**
-     * Get follow-up leads for employee
-     */
-    public function getFollowUpLeadsForEmployee($userId, $limit = 5) {
-        // Check if user has any territories
-        $sql = "SELECT COUNT(*) FROM employee_territories 
-                WHERE user_id = ? AND deleted_at IS NULL";
-        
-        $hasTerritory = $this->db->getValue($sql, [$userId]) > 0;
-        
-        if (!$hasTerritory) {
-            // If user has no territories, return empty array
-            return [];
-        }
-        
-        // Get territories for user
-        $territorySql = "SELECT state_id, city_id FROM employee_territories WHERE user_id = ? AND deleted_at IS NULL";
-        $territories = $this->db->getRows($territorySql, [$userId]);
-        
-        // Build query conditions for territories
-        $conditions = [];
-        $params = [];
-        
-        foreach ($territories as $territory) {
-            if ($territory['city_id']) {
-                // Territory with specific city
-                $conditions[] = "(l.state_id = ? AND l.city_id = ?)";
-                $params[] = $territory['state_id'];
-                $params[] = $territory['city_id'];
-            } else {
-                // Territory with entire state
-                $conditions[] = "(l.state_id = ?)";
-                $params[] = $territory['state_id'];
-            }
-        }
-        
-        // Add assigned leads
-        $conditions[] = "(l.assigned_to = ?)";
-        $params[] = $userId;
-        
-        // Build final query
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS assigned_to_name
-                FROM {$this->table} l
-                LEFT JOIN states s ON l.state_id = s.id
-                LEFT JOIN cities c ON l.city_id = c.id
-                LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.status = 'follow_up' AND l.follow_up_date <= NOW() AND l.deleted_at IS NULL 
-                AND (" . implode(" OR ", $conditions) . ")
-                ORDER BY l.follow_up_date ASC
-                LIMIT ?";
-        
-        $params[] = $limit;
-        
-        return $this->db->getRows($sql, $params);
-    }
-    
-    /**
-     * Get lead counts by status
-     */
-    public function getCountsByStatus() {
-        $sql = "SELECT 
-                SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) AS new,
-                SUM(CASE WHEN status = 'follow_up' THEN 1 ELSE 0 END) AS follow_up,
-                SUM(CASE WHEN status = 'not_attend' THEN 1 ELSE 0 END) AS not_attend,
-                SUM(CASE WHEN status = 'wrong_number' THEN 1 ELSE 0 END) AS wrong_number,
-                SUM(CASE WHEN status = 'other' THEN 1 ELSE 0 END) AS other,
-                SUM(CASE WHEN status = 'dead' THEN 1 ELSE 0 END) AS dead,
-                SUM(CASE WHEN status = 'interested' THEN 1 ELSE 0 END) AS interested,
-                SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) AS win,
-                COUNT(*) AS total
-                FROM {$this->table}
-                WHERE deleted_at IS NULL";
-        
-        return $this->db->getRow($sql);
-    }
-    
-    /**
-     * Get lead counts by status for employee
-     */
-    public function getCountsByStatusForEmployee($userId) {
-        // Check if user has any territories
-        $sql = "SELECT COUNT(*) FROM employee_territories 
-                WHERE user_id = ? AND deleted_at IS NULL";
-        
-        $hasTerritory = $this->db->getValue($sql, [$userId]) > 0;
-        
-        if (!$hasTerritory) {
-            // If user has no territories, return empty counts
-            return [
-                'new' => 0,
-                'follow_up' => 0,
-                'not_attend' => 0,
-                'wrong_number' => 0,
-                'other' => 0,
-                'dead' => 0,
-                'interested' => 0,
-                'win' => 0,
-                'total' => 0
-            ];
-        }
-        
-        // Get territories for user
-        $territorySql = "SELECT state_id, city_id FROM employee_territories WHERE user_id = ? AND deleted_at IS NULL";
-        $territories = $this->db->getRows($territorySql, [$userId]);
-        
-        // Build query conditions for territories
-        $conditions = [];
-        $params = [];
-        
-        foreach ($territories as $territory) {
-            if ($territory['city_id']) {
-                // Territory with specific city
-                $conditions[] = "(l.state_id = ? AND l.city_id = ?)";
-                $params[] = $territory['state_id'];
-                $params[] = $territory['city_id'];
-            } else {
-                // Territory with entire state
-                $conditions[] = "(l.state_id = ?)";
-                $params[] = $territory['state_id'];
-            }
-        }
-        
-        // Add assigned leads
-        $conditions[] = "(l.assigned_to = ?)";
-        $params[] = $userId;
-        
-        // Build final query
-        $sql = "SELECT 
-                SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) AS new,
-                SUM(CASE WHEN status = 'follow_up' THEN 1 ELSE 0 END) AS follow_up,
-                SUM(CASE WHEN status = 'not_attend' THEN 1 ELSE 0 END) AS not_attend,
-                SUM(CASE WHEN status = 'wrong_number' THEN 1 ELSE 0 END) AS wrong_number,
-                SUM(CASE WHEN status = 'other' THEN 1 ELSE 0 END) AS other,
-                SUM(CASE WHEN status = 'dead' THEN 1 ELSE 0 END) AS dead,
-                SUM(CASE WHEN status = 'interested' THEN 1 ELSE 0 END) AS interested,
-                SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) AS win,
-                COUNT(*) AS total
-                FROM {$this->table} l
-                WHERE l.deleted_at IS NULL AND (" . implode(" OR ", $conditions) . ")";
-        
-        return $this->db->getRow($sql, $params);
-    }
-    
-    /**
-     * Get filtered leads for reports
+     * Get filtered leads
      */
     public function getFilteredLeads($page = 1, $stateId = 0, $cityId = 0, $status = '', $employeeId = 0, $startDate = '', $endDate = '', $limit = RECORDS_PER_PAGE) {
         $offset = ($page - 1) * $limit;
-        $conditions = [];
         $params = [];
         
-        // Add filters
-        if ($stateId) {
-            $conditions[] = "l.state_id = ?";
-            $params[] = $stateId;
-        }
-        
-        if ($cityId) {
-            $conditions[] = "l.city_id = ?";
-            $params[] = $cityId;
-        }
-        
-        if ($status) {
-            $conditions[] = "l.status = ?";
-            $params[] = $status;
-        }
-        
-        if ($employeeId) {
-            $conditions[] = "l.assigned_to = ?";
-            $params[] = $employeeId;
-        }
-        
-        if ($startDate) {
-            $conditions[] = "l.created_at >= ?";
-            $params[] = $startDate . ' 00:00:00';
-        }
-        
-        if ($endDate) {
-            $conditions[] = "l.created_at <= ?";
-            $params[] = $endDate . ' 23:59:59';
-        }
-        
-        // Build WHERE clause
-        $whereClause = "l.deleted_at IS NULL";
-        if (!empty($conditions)) {
-            $whereClause .= " AND " . implode(" AND ", $conditions);
-        }
-        
-        // Build final query
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS employee_name
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE {$whereClause}
-                ORDER BY l.id DESC
-                LIMIT ?, ?";
+                WHERE l.deleted_at IS NULL";
         
+        // Apply filters
+        if ($stateId > 0) {
+            $sql .= " AND l.state_id = ?";
+            $params[] = $stateId;
+        }
+        
+        if ($cityId > 0) {
+            $sql .= " AND l.city_id = ?";
+            $params[] = $cityId;
+        }
+        
+        if (!empty($status)) {
+            $sql .= " AND l.status = ?";
+            $params[] = $status;
+        }
+        
+        if ($employeeId > 0) {
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $employeeId;
+        }
+        
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(l.created_at) >= ?";
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(l.created_at) <= ?";
+            $params[] = $endDate;
+        }
+        
+        $sql .= " ORDER BY l.id DESC LIMIT ?, ?";
         $params[] = $offset;
         $params[] = $limit;
         
@@ -445,51 +103,43 @@ class Lead extends Model {
     }
     
     /**
-     * Count filtered leads for reports
+     * Count filtered leads
      */
     public function countFilteredLeads($stateId = 0, $cityId = 0, $status = '', $employeeId = 0, $startDate = '', $endDate = '') {
-        $conditions = [];
         $params = [];
         
-        // Add filters
-        if ($stateId) {
-            $conditions[] = "l.state_id = ?";
+        $sql = "SELECT COUNT(*) FROM {$this->table} l WHERE l.deleted_at IS NULL";
+        
+        // Apply filters
+        if ($stateId > 0) {
+            $sql .= " AND l.state_id = ?";
             $params[] = $stateId;
         }
         
-        if ($cityId) {
-            $conditions[] = "l.city_id = ?";
+        if ($cityId > 0) {
+            $sql .= " AND l.city_id = ?";
             $params[] = $cityId;
         }
         
-        if ($status) {
-            $conditions[] = "l.status = ?";
+        if (!empty($status)) {
+            $sql .= " AND l.status = ?";
             $params[] = $status;
         }
         
-        if ($employeeId) {
-            $conditions[] = "l.assigned_to = ?";
+        if ($employeeId > 0) {
+            $sql .= " AND l.assigned_to = ?";
             $params[] = $employeeId;
         }
         
-        if ($startDate) {
-            $conditions[] = "l.created_at >= ?";
-            $params[] = $startDate . ' 00:00:00';
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(l.created_at) >= ?";
+            $params[] = $startDate;
         }
         
-        if ($endDate) {
-            $conditions[] = "l.created_at <= ?";
-            $params[] = $endDate . ' 23:59:59';
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(l.created_at) <= ?";
+            $params[] = $endDate;
         }
-        
-        // Build WHERE clause
-        $whereClause = "l.deleted_at IS NULL";
-        if (!empty($conditions)) {
-            $whereClause .= " AND " . implode(" AND ", $conditions);
-        }
-        
-        // Build final query
-        $sql = "SELECT COUNT(*) FROM {$this->table} l WHERE {$whereClause}";
         
         return $this->db->getValue($sql, $params);
     }
@@ -498,107 +148,91 @@ class Lead extends Model {
      * Get filtered leads for export
      */
     public function getFilteredLeadsForExport($stateId = 0, $cityId = 0, $status = '', $employeeId = 0, $startDate = '', $endDate = '') {
-        $conditions = [];
         $params = [];
         
-        // Add filters
-        if ($stateId) {
-            $conditions[] = "l.state_id = ?";
-            $params[] = $stateId;
-        }
-        
-        if ($cityId) {
-            $conditions[] = "l.city_id = ?";
-            $params[] = $cityId;
-        }
-        
-        if ($status) {
-            $conditions[] = "l.status = ?";
-            $params[] = $status;
-        }
-        
-        if ($employeeId) {
-            $conditions[] = "l.assigned_to = ?";
-            $params[] = $employeeId;
-        }
-        
-        if ($startDate) {
-            $conditions[] = "l.created_at >= ?";
-            $params[] = $startDate . ' 00:00:00';
-        }
-        
-        if ($endDate) {
-            $conditions[] = "l.created_at <= ?";
-            $params[] = $endDate . ' 23:59:59';
-        }
-        
-        // Build WHERE clause
-        $whereClause = "l.deleted_at IS NULL";
-        if (!empty($conditions)) {
-            $whereClause .= " AND " . implode(" AND ", $conditions);
-        }
-        
-        // Build final query
-        $sql = "SELECT l.*, s.name AS state_name, c.name AS city_name, u.name AS employee_name
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE {$whereClause}
-                ORDER BY l.id DESC";
+                WHERE l.deleted_at IS NULL";
+        
+        // Apply filters
+        if ($stateId > 0) {
+            $sql .= " AND l.state_id = ?";
+            $params[] = $stateId;
+        }
+        
+        if ($cityId > 0) {
+            $sql .= " AND l.city_id = ?";
+            $params[] = $cityId;
+        }
+        
+        if (!empty($status)) {
+            $sql .= " AND l.status = ?";
+            $params[] = $status;
+        }
+        
+        if ($employeeId > 0) {
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $employeeId;
+        }
+        
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(l.created_at) >= ?";
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(l.created_at) <= ?";
+            $params[] = $endDate;
+        }
+        
+        $sql .= " ORDER BY l.id DESC";
         
         return $this->db->getRows($sql, $params);
     }
     
     /**
-     * Get filtered call logs for reports
+     * Get filtered call logs
      */
     public function getFilteredCallLogs($page = 1, $leadId = 0, $status = '', $employeeId = 0, $startDate = '', $endDate = '', $limit = RECORDS_PER_PAGE) {
         $offset = ($page - 1) * $limit;
-        $conditions = [];
         $params = [];
         
-        // Add filters
-        if ($leadId) {
-            $conditions[] = "cl.lead_id = ?";
-            $params[] = $leadId;
-        }
-        
-        if ($status) {
-            $conditions[] = "cl.status = ?";
-            $params[] = $status;
-        }
-        
-        if ($employeeId) {
-            $conditions[] = "cl.created_by = ?";
-            $params[] = $employeeId;
-        }
-        
-        if ($startDate) {
-            $conditions[] = "cl.created_at >= ?";
-            $params[] = $startDate . ' 00:00:00';
-        }
-        
-        if ($endDate) {
-            $conditions[] = "cl.created_at <= ?";
-            $params[] = $endDate . ' 23:59:59';
-        }
-        
-        // Build WHERE clause
-        $whereClause = "cl.deleted_at IS NULL";
-        if (!empty($conditions)) {
-            $whereClause .= " AND " . implode(" AND ", $conditions);
-        }
-        
-        // Build final query
-        $sql = "SELECT cl.*, l.name AS lead_name, u.name AS employee_name
+        $sql = "SELECT cl.*, l.name as lead_name, u.name as created_by_name
                 FROM call_logs cl
                 LEFT JOIN leads l ON cl.lead_id = l.id
                 LEFT JOIN users u ON cl.created_by = u.id
-                WHERE {$whereClause}
-                ORDER BY cl.id DESC
-                LIMIT ?, ?";
+                WHERE cl.deleted_at IS NULL";
         
+        // Apply filters
+        if ($leadId > 0) {
+            $sql .= " AND cl.lead_id = ?";
+            $params[] = $leadId;
+        }
+        
+        if (!empty($status)) {
+            $sql .= " AND cl.status = ?";
+            $params[] = $status;
+        }
+        
+        if ($employeeId > 0) {
+            $sql .= " AND cl.created_by = ?";
+            $params[] = $employeeId;
+        }
+        
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(cl.created_at) >= ?";
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(cl.created_at) <= ?";
+            $params[] = $endDate;
+        }
+        
+        $sql .= " ORDER BY cl.id DESC LIMIT ?, ?";
         $params[] = $offset;
         $params[] = $limit;
         
@@ -606,46 +240,38 @@ class Lead extends Model {
     }
     
     /**
-     * Count filtered call logs for reports
+     * Count filtered call logs
      */
     public function countFilteredCallLogs($leadId = 0, $status = '', $employeeId = 0, $startDate = '', $endDate = '') {
-        $conditions = [];
         $params = [];
         
-        // Add filters
-        if ($leadId) {
-            $conditions[] = "cl.lead_id = ?";
+        $sql = "SELECT COUNT(*) FROM call_logs cl WHERE cl.deleted_at IS NULL";
+        
+        // Apply filters
+        if ($leadId > 0) {
+            $sql .= " AND cl.lead_id = ?";
             $params[] = $leadId;
         }
         
-        if ($status) {
-            $conditions[] = "cl.status = ?";
+        if (!empty($status)) {
+            $sql .= " AND cl.status = ?";
             $params[] = $status;
         }
         
-        if ($employeeId) {
-            $conditions[] = "cl.created_by = ?";
+        if ($employeeId > 0) {
+            $sql .= " AND cl.created_by = ?";
             $params[] = $employeeId;
         }
         
-        if ($startDate) {
-            $conditions[] = "cl.created_at >= ?";
-            $params[] = $startDate . ' 00:00:00';
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(cl.created_at) >= ?";
+            $params[] = $startDate;
         }
         
-        if ($endDate) {
-            $conditions[] = "cl.created_at <= ?";
-            $params[] = $endDate . ' 23:59:59';
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(cl.created_at) <= ?";
+            $params[] = $endDate;
         }
-        
-        // Build WHERE clause
-        $whereClause = "cl.deleted_at IS NULL";
-        if (!empty($conditions)) {
-            $whereClause .= " AND " . implode(" AND ", $conditions);
-        }
-        
-        // Build final query
-        $sql = "SELECT COUNT(*) FROM call_logs cl WHERE {$whereClause}";
         
         return $this->db->getValue($sql, $params);
     }
@@ -654,104 +280,441 @@ class Lead extends Model {
      * Get filtered call logs for export
      */
     public function getFilteredCallLogsForExport($leadId = 0, $status = '', $employeeId = 0, $startDate = '', $endDate = '') {
-        $conditions = [];
         $params = [];
         
-        // Add filters
-        if ($leadId) {
-            $conditions[] = "cl.lead_id = ?";
-            $params[] = $leadId;
-        }
-        
-        if ($status) {
-            $conditions[] = "cl.status = ?";
-            $params[] = $status;
-        }
-        
-        if ($employeeId) {
-            $conditions[] = "cl.created_by = ?";
-            $params[] = $employeeId;
-        }
-        
-        if ($startDate) {
-            $conditions[] = "cl.created_at >= ?";
-            $params[] = $startDate . ' 00:00:00';
-        }
-        
-        if ($endDate) {
-            $conditions[] = "cl.created_at <= ?";
-            $params[] = $endDate . ' 23:59:59';
-        }
-        
-        // Build WHERE clause
-        $whereClause = "cl.deleted_at IS NULL";
-        if (!empty($conditions)) {
-            $whereClause .= " AND " . implode(" AND ", $conditions);
-        }
-        
-        // Build final query
-        $sql = "SELECT cl.*, l.name AS lead_name, u.name AS employee_name
+        $sql = "SELECT cl.*, l.name as lead_name, u.name as created_by_name
                 FROM call_logs cl
                 LEFT JOIN leads l ON cl.lead_id = l.id
                 LEFT JOIN users u ON cl.created_by = u.id
-                WHERE {$whereClause}
-                ORDER BY cl.id DESC";
+                WHERE cl.deleted_at IS NULL";
+        
+        // Apply filters
+        if ($leadId > 0) {
+            $sql .= " AND cl.lead_id = ?";
+            $params[] = $leadId;
+        }
+        
+        if (!empty($status)) {
+            $sql .= " AND cl.status = ?";
+            $params[] = $status;
+        }
+        
+        if ($employeeId > 0) {
+            $sql .= " AND cl.created_by = ?";
+            $params[] = $employeeId;
+        }
+        
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(cl.created_at) >= ?";
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(cl.created_at) <= ?";
+            $params[] = $endDate;
+        }
+        
+        $sql .= " ORDER BY cl.id DESC";
         
         return $this->db->getRows($sql, $params);
     }
     
     /**
-     * Get employee performance data for reports
+     * Get employee performance
      */
     public function getEmployeePerformance($employeeId = 0, $startDate = '', $endDate = '') {
-        $conditions = [];
         $params = [];
         
-        // Add filters
-        if ($employeeId) {
-            $conditions[] = "u.id = ?";
-            $params[] = $employeeId;
-        } else {
-            $conditions[] = "u.role = 'employee'";
-        }
-        
-        if ($startDate) {
-            $conditions[] = "l.created_at >= ?";
-            $params[] = $startDate . ' 00:00:00';
-        }
-        
-        if ($endDate) {
-            $conditions[] = "l.created_at <= ?";
-            $params[] = $endDate . ' 23:59:59';
-        }
-        
-        // Build WHERE clause
-        $whereClause = "u.deleted_at IS NULL AND u.status = 1";
-        if (!empty($conditions)) {
-            $whereClause .= " AND " . implode(" AND ", $conditions);
-        }
-        
-        // Build final query
         $sql = "SELECT 
-                u.id,
-                u.name,
-                COUNT(l.id) AS total_leads,
-                SUM(CASE WHEN l.status = 'new' THEN 1 ELSE 0 END) AS new,
-                SUM(CASE WHEN l.status = 'follow_up' THEN 1 ELSE 0 END) AS follow_up,
-                SUM(CASE WHEN l.status = 'not_attend' THEN 1 ELSE 0 END) AS not_attend,
-                SUM(CASE WHEN l.status = 'wrong_number' THEN 1 ELSE 0 END) AS wrong_number,
-                SUM(CASE WHEN l.status = 'other' THEN 1 ELSE 0 END) AS other,
-                SUM(CASE WHEN l.status = 'dead' THEN 1 ELSE 0 END) AS dead,
-                SUM(CASE WHEN l.status = 'interested' THEN 1 ELSE 0 END) AS interested,
-                SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) AS win,
-                ROUND(SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) / COUNT(l.id) * 100, 2) AS win_rate
+                    u.id, 
+                    u.name,
+                    COUNT(DISTINCT l.id) as total_leads,
+                    COUNT(DISTINCT cl.id) as total_calls,
+                    SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) as total_wins,
+                    SUM(CASE WHEN l.status = 'interested' THEN 1 ELSE 0 END) as total_interested,
+                    SUM(CASE WHEN l.status = 'follow_up' THEN 1 ELSE 0 END) as total_follow_ups,
+                    SUM(CASE WHEN l.status = 'dead' THEN 1 ELSE 0 END) as total_dead,
+                    SUM(CASE WHEN l.status = 'wrong_number' THEN 1 ELSE 0 END) as total_wrong_numbers,
+                    SUM(CASE WHEN l.status = 'not_attend' THEN 1 ELSE 0 END) as total_not_attend,
+                    SUM(CASE WHEN l.status = 'other' THEN 1 ELSE 0 END) as total_other
                 FROM users u
                 LEFT JOIN leads l ON u.id = l.assigned_to AND l.deleted_at IS NULL
-                WHERE {$whereClause}
-                GROUP BY u.id
-                ORDER BY win_rate DESC, total_leads DESC";
+                LEFT JOIN call_logs cl ON l.id = cl.lead_id AND cl.deleted_at IS NULL
+                WHERE u.role = 'employee' AND u.deleted_at IS NULL";
+        
+        // Apply filters
+        if ($employeeId > 0) {
+            $sql .= " AND u.id = ?";
+            $params[] = $employeeId;
+        }
+        
+        if (!empty($startDate)) {
+            $sql .= " AND (DATE(l.created_at) >= ? OR DATE(cl.created_at) >= ?)";
+            $params[] = $startDate;
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND (DATE(l.created_at) <= ? OR DATE(cl.created_at) <= ?)";
+            $params[] = $endDate;
+            $params[] = $endDate;
+        }
+        
+        $sql .= " GROUP BY u.id, u.name ORDER BY total_wins DESC, total_interested DESC";
         
         return $this->db->getRows($sql, $params);
+    }
+    
+    /**
+     * Get lead statistics for dashboard
+     */
+    public function getLeadStats() {
+        $userId = getCurrentUserId();
+        $isAdmin = hasRole('administrator');
+        
+        // Base SQL for counting leads by status
+        $sql = "SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new,
+                    SUM(CASE WHEN status = 'follow_up' THEN 1 ELSE 0 END) as follow_up,
+                    SUM(CASE WHEN status = 'not_attend' THEN 1 ELSE 0 END) as not_attend,
+                    SUM(CASE WHEN status = 'wrong_number' THEN 1 ELSE 0 END) as wrong_number,
+                    SUM(CASE WHEN status = 'other' THEN 1 ELSE 0 END) as other,
+                    SUM(CASE WHEN status = 'dead' THEN 1 ELSE 0 END) as dead,
+                    SUM(CASE WHEN status = 'interested' THEN 1 ELSE 0 END) as interested,
+                    SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) as win
+                FROM {$this->table}
+                WHERE deleted_at IS NULL";
+        
+        // If not admin, only show assigned leads
+        if (!$isAdmin) {
+            $sql .= " AND assigned_to = ?";
+            return $this->db->getRow($sql, [$userId]);
+        }
+        
+        return $this->db->getRow($sql);
+    }
+    
+    /**
+     * Get today's follow-ups
+     */
+    public function getTodayFollowUps() {
+        $userId = getCurrentUserId();
+        $isAdmin = hasRole('administrator');
+        $today = date('Y-m-d');
+        
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
+                FROM {$this->table} l
+                LEFT JOIN states s ON l.state_id = s.id
+                LEFT JOIN cities c ON l.city_id = c.id
+                LEFT JOIN users u ON l.assigned_to = u.id
+                WHERE l.deleted_at IS NULL 
+                AND l.status = 'follow_up' 
+                AND DATE(l.follow_up_date) = ?";
+        
+        // If not admin, only show assigned leads
+        if (!$isAdmin) {
+            $sql .= " AND l.assigned_to = ?";
+            $sql .= " ORDER BY l.follow_up_date ASC LIMIT 10";
+            return $this->db->getRows($sql, [$today, $userId]);
+        }
+        
+        $sql .= " ORDER BY l.follow_up_date ASC LIMIT 10";
+        return $this->db->getRows($sql, [$today]);
+    }
+    
+    /**
+     * Get daily call count
+     */
+    public function getDailyCallCount() {
+        $userId = getCurrentUserId();
+        $isAdmin = hasRole('administrator');
+        
+        // Get call counts for the last 7 days
+        $sql = "SELECT 
+                    DATE(created_at) as call_date,
+                    COUNT(*) as call_count
+                FROM call_logs
+                WHERE deleted_at IS NULL
+                AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+        
+        // If not admin, only show calls made by the user
+        if (!$isAdmin) {
+            $sql .= " AND created_by = ?";
+            $sql .= " GROUP BY DATE(created_at) ORDER BY call_date ASC";
+            return $this->db->getRows($sql, [$userId]);
+        }
+        
+        $sql .= " GROUP BY DATE(created_at) ORDER BY call_date ASC";
+        return $this->db->getRows($sql);
+    }
+    
+    /**
+     * Get recent call logs
+     */
+    public function getRecentCallLogs() {
+        $userId = getCurrentUserId();
+        $isAdmin = hasRole('administrator');
+        
+        $sql = "SELECT cl.*, l.name as lead_name, u.name as created_by_name
+                FROM call_logs cl
+                LEFT JOIN leads l ON cl.lead_id = l.id
+                LEFT JOIN users u ON cl.created_by = u.id
+                WHERE cl.deleted_at IS NULL";
+        
+        // If not admin, only show calls made by the user or for leads assigned to the user
+        if (!$isAdmin) {
+            $sql .= " AND (cl.created_by = ? OR l.assigned_to = ?)";
+            $sql .= " ORDER BY cl.created_at DESC LIMIT 10";
+            return $this->db->getRows($sql, [$userId, $userId]);
+        }
+        
+        $sql .= " ORDER BY cl.created_at DESC LIMIT 10";
+        return $this->db->getRows($sql);
+    }
+    
+    /**
+     * Get employee performance stats for dashboard
+     */
+    public function getEmployeePerformanceStats() {
+        $sql = "SELECT 
+                    u.id, 
+                    u.name,
+                    COUNT(DISTINCT l.id) as total_leads,
+                    COUNT(DISTINCT cl.id) as total_calls,
+                    SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) as total_wins,
+                    SUM(CASE WHEN l.status = 'interested' THEN 1 ELSE 0 END) as total_interested
+                FROM users u
+                LEFT JOIN leads l ON u.id = l.assigned_to AND l.deleted_at IS NULL
+                LEFT JOIN call_logs cl ON l.id = cl.lead_id AND cl.deleted_at IS NULL
+                WHERE u.role = 'employee' AND u.deleted_at IS NULL
+                GROUP BY u.id, u.name
+                ORDER BY total_wins DESC, total_interested DESC
+                LIMIT 5";
+        
+        return $this->db->getRows($sql);
+    }
+    
+    /**
+     * Get leads for employee
+     */
+    public function getLeadsForEmployee($employeeId) {
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name
+                FROM {$this->table} l
+                LEFT JOIN states s ON l.state_id = s.id
+                LEFT JOIN cities c ON l.city_id = c.id
+                WHERE l.deleted_at IS NULL AND l.assigned_to = ?
+                ORDER BY l.id DESC";
+        
+        return $this->db->getRows($sql, [$employeeId]);
+    }
+    
+    /**
+     * Get leads by state
+     */
+    public function getLeadsByState($stateId) {
+        $sql = "SELECT l.*, c.name as city_name, u.name as assigned_to_name
+                FROM {$this->table} l
+                LEFT JOIN cities c ON l.city_id = c.id
+                LEFT JOIN users u ON l.assigned_to = u.id
+                WHERE l.deleted_at IS NULL AND l.state_id = ?
+                ORDER BY l.id DESC";
+        
+        return $this->db->getRows($sql, [$stateId]);
+    }
+    
+    /**
+     * Get leads by city
+     */
+    public function getLeadsByCity($cityId) {
+        $sql = "SELECT l.*, s.name as state_name, u.name as assigned_to_name
+                FROM {$this->table} l
+                LEFT JOIN states s ON l.state_id = s.id
+                LEFT JOIN users u ON l.assigned_to = u.id
+                WHERE l.deleted_at IS NULL AND l.city_id = ?
+                ORDER BY l.id DESC";
+        
+        return $this->db->getRows($sql, [$cityId]);
+    }
+    
+    /**
+     * Get leads by status
+     */
+    public function getLeadsByStatus($status) {
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
+                FROM {$this->table} l
+                LEFT JOIN states s ON l.state_id = s.id
+                LEFT JOIN cities c ON l.city_id = c.id
+                LEFT JOIN users u ON l.assigned_to = u.id
+                WHERE l.deleted_at IS NULL AND l.status = ?
+                ORDER BY l.id DESC";
+        
+        return $this->db->getRows($sql, [$status]);
+    }
+    
+    /**
+     * Update lead status
+     */
+    public function updateStatus($id, $status, $remarks = '', $followUpDate = null, $otherReason = '') {
+        // Start transaction
+        $this->db->beginTransaction();
+        
+        try {
+            // Update lead status
+            $data = [
+                'status' => $status,
+                'remarks' => $remarks,
+                'updated_by' => getCurrentUserId()
+            ];
+            
+            // Handle follow-up date
+            if ($status == 'follow_up') {
+                if (empty($followUpDate)) {
+                    throw new Exception("Follow-up date is required for follow-up status");
+                }
+                $data['follow_up_date'] = $followUpDate;
+            } else {
+                $data['follow_up_date'] = null;
+            }
+            
+            // Handle other reason
+            if ($status == 'other') {
+                if (empty($otherReason)) {
+                    throw new Exception("Reason is required for other status");
+                }
+                $data['other_reason'] = $otherReason;
+            } else {
+                $data['other_reason'] = null;
+            }
+            
+            // Update lead
+            $this->update($id, $data);
+            
+            // Create call log
+            $callLogData = [
+                'lead_id' => $id,
+                'status' => $status,
+                'remarks' => $remarks,
+                'follow_up_date' => ($status == 'follow_up') ? $followUpDate : null,
+                'other_reason' => ($status == 'other') ? $otherReason : null,
+                'created_by' => getCurrentUserId()
+            ];
+            
+            $this->db->insert('call_logs', $callLogData);
+            
+            // Commit transaction
+            $this->db->commit();
+            
+            return true;
+        } catch (Exception $e) {
+            // Rollback transaction
+            $this->db->rollback();
+            throw $e;
+        }
+    }
+    
+    /**
+     * Import leads from CSV
+     */
+    public function importFromCSV($file, $assignedTo) {
+        // Check if file exists
+        if (!file_exists($file)) {
+            throw new Exception("File not found");
+        }
+        
+        // Open file
+        $handle = fopen($file, 'r');
+        if (!$handle) {
+            throw new Exception("Could not open file");
+        }
+        
+        // Read header row
+        $header = fgetcsv($handle);
+        $requiredColumns = ['name', 'phone', 'state', 'city'];
+        $missingColumns = array_diff($requiredColumns, $header);
+        
+        if (!empty($missingColumns)) {
+            fclose($handle);
+            throw new Exception("Missing required columns: " . implode(', ', $missingColumns));
+        }
+        
+        // Map column indexes
+        $columnMap = array_flip($header);
+        
+        // Start transaction
+        $this->db->beginTransaction();
+        
+        try {
+            $imported = 0;
+            $errors = [];
+            $row = 2; // Start from row 2 (after header)
+            
+            // Process rows
+            while (($data = fgetcsv($handle)) !== false) {
+                try {
+                    // Extract data
+                    $name = $data[$columnMap['name']] ?? '';
+                    $phone = $data[$columnMap['phone']] ?? '';
+                    $email = $data[$columnMap['email']] ?? '';
+                    $address = $data[$columnMap['address']] ?? '';
+                    $stateName = $data[$columnMap['state']] ?? '';
+                    $cityName = $data[$columnMap['city']] ?? '';
+                    
+                    // Validate required fields
+                    if (empty($name) || empty($phone) || empty($stateName) || empty($cityName)) {
+                        throw new Exception("Name, phone, state, and city are required");
+                    }
+                    
+                    // Get state ID
+                    $stateId = $this->db->getValue("SELECT id FROM states WHERE name = ? AND deleted_at IS NULL", [$stateName]);
+                    if (!$stateId) {
+                        throw new Exception("State not found: $stateName");
+                    }
+                    
+                    // Get city ID
+                    $cityId = $this->db->getValue("SELECT id FROM cities WHERE name = ? AND state_id = ? AND deleted_at IS NULL", [$cityName, $stateId]);
+                    if (!$cityId) {
+                        throw new Exception("City not found: $cityName in state $stateName");
+                    }
+                    
+                    // Create lead
+                    $leadData = [
+                        'name' => $name,
+                        'phone' => $phone,
+                        'email' => $email,
+                        'address' => $address,
+                        'state_id' => $stateId,
+                        'city_id' => $cityId,
+                        'status' => 'new',
+                        'assigned_to' => $assignedTo,
+                        'created_by' => getCurrentUserId()
+                    ];
+                    
+                    $this->create($leadData);
+                    $imported++;
+                } catch (Exception $e) {
+                    $errors[] = "Row $row: " . $e->getMessage();
+                }
+                
+                $row++;
+            }
+            
+            // Commit transaction
+            $this->db->commit();
+            
+            fclose($handle);
+            
+            return [
+                'imported' => $imported,
+                'errors' => $errors
+            ];
+        } catch (Exception $e) {
+            // Rollback transaction
+            $this->db->rollback();
+            
+            fclose($handle);
+            throw $e;
+        }
     }
 }
 

@@ -118,6 +118,17 @@ class City extends Model {
     }
     
     /**
+     * Get count of leads by city ID
+     * 
+     * @param int $id City ID
+     * @return int Number of leads
+     */
+    public function getLeadCount($id) {
+        $sql = "SELECT COUNT(*) FROM leads WHERE city_id = ? AND deleted_at IS NULL";
+        return $this->db->getValue($sql, [$id]);
+    }
+    
+    /**
      * Hard delete a city
      * 
      * This method completely removes a city from the database
@@ -132,4 +143,3 @@ class City extends Model {
         return true;
     }
 }
-

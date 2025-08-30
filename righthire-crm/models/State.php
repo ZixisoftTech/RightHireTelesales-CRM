@@ -92,6 +92,28 @@ class State extends Model {
     }
     
     /**
+     * Get count of leads by state ID
+     * 
+     * @param int $id State ID
+     * @return int Number of leads
+     */
+    public function getLeadCount($id) {
+        $sql = "SELECT COUNT(*) FROM leads WHERE state_id = ? AND deleted_at IS NULL";
+        return $this->db->getValue($sql, [$id]);
+    }
+    
+    /**
+     * Get count of cities by state ID
+     * 
+     * @param int $id State ID
+     * @return int Number of cities
+     */
+    public function getCityCount($id) {
+        $sql = "SELECT COUNT(*) FROM cities WHERE state_id = ? AND deleted_at IS NULL";
+        return $this->db->getValue($sql, [$id]);
+    }
+    
+    /**
      * Hard delete a state
      * 
      * This method completely removes a state from the database
@@ -106,4 +128,3 @@ class State extends Model {
         return true;
     }
 }
-

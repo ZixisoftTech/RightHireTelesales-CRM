@@ -7,10 +7,12 @@
 
 require_once 'models/City.php';
 require_once 'models/State.php';
+require_once 'config/Database.php';
 
 class CityController {
     private $cityModel;
     private $stateModel;
+    private $db;
     
     /**
      * Constructor
@@ -18,6 +20,7 @@ class CityController {
     public function __construct() {
         $this->cityModel = new City();
         $this->stateModel = new State();
+        $this->db = Database::getInstance();
     }
     
     /**
@@ -198,6 +201,42 @@ class CityController {
             exit;
         }
         
+        // Check if city has leads
+        $leadCount = $this->cityModel->getLeadCount($id);
+        
+        // If there are leads associated with this city
+        if ($leadCount > 0) {
+            // If this is a confirmation request
+            if (isset($_GET['confirm']) && $_GET['confirm'] == 1) {
+                // Delete all associated leads first (cascade delete)
+                $this->db->beginTransaction();
+                
+                try {
+                    // Soft delete leads associated with this city
+                    $this->db->query("UPDATE leads SET deleted_at = NOW(), updated_by = ? WHERE city_id = ? AND deleted_at IS NULL", [getCurrentUserId(), $id]);
+                    
+                    // Now delete the city
+                    $this->cityModel->hardDelete($id);
+                    
+                    $this->db->commit();
+                    setFlashMessage('success', 'City and all associated data deleted successfully');
+                    redirect('cities');
+                    exit;
+                } catch (Exception $e) {
+                    $this->db->rollback();
+                    setFlashMessage('error', 'Failed to delete city: ' . $e->getMessage());
+                    redirect('cities');
+                    exit;
+                }
+            } else {
+                // Show confirmation page with counts
+                $city = $this->cityModel->find($id);
+                $state = $this->stateModel->find($city['state_id']);
+                include 'views/cities/delete_confirm.php';
+                exit;
+            }
+        }
+        
         // Delete city (hard delete to allow reusing the name)
         $result = $this->cityModel->hardDelete($id);
         
@@ -268,4 +307,3 @@ class CityController {
         exit;
     }
 }
-

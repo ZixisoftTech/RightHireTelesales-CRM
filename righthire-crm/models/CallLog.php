@@ -13,6 +13,9 @@ class CallLog extends Model {
     
     /**
      * Get call logs by lead ID
+     * 
+     * @param int $leadId Lead ID
+     * @return array Array of call logs
      */
     public function getByLeadId($leadId) {
         $sql = "SELECT cl.*, u.name AS created_by_name
@@ -22,6 +25,16 @@ class CallLog extends Model {
                 ORDER BY cl.created_at DESC";
         
         return $this->db->getRows($sql, [$leadId]);
+    }
+    
+    /**
+     * Alias for getByLeadId for backward compatibility
+     * 
+     * @param int $leadId Lead ID
+     * @return array Array of call logs
+     */
+    public function getCallLogsByLeadId($leadId) {
+        return $this->getByLeadId($leadId);
     }
     
     /**

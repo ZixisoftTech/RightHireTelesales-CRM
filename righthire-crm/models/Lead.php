@@ -881,4 +881,15 @@ class Lead extends Model {
     public function createLead($data) {
         return $this->create($data);
     }
+    
+    /**
+     * Update a lead
+     * 
+     * @param int $id Lead ID
+     * @param array $data Lead data
+     * @return bool Success or failure
+     */
+    public function updateLead($id, $data) {
+        return $this->update($id, $data);
+    }
 }

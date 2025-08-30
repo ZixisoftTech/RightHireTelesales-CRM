@@ -170,6 +170,11 @@ class User extends Model {
     
     /**
      * Add employee territory
+     * 
+     * @param int $userId User ID
+     * @param int $stateId State ID
+     * @param int|null $cityId City ID (optional)
+     * @return int|bool ID of created territory or false on failure
      */
     public function addEmployeeTerritory($userId, $stateId, $cityId = null) {
         // Check if a soft-deleted territory exists with the same combination
@@ -184,10 +189,11 @@ class User extends Model {
             $this->hardDeleteTerritory($existingId);
         }
         
+        // Ensure city_id is NULL if not provided to avoid foreign key constraint issues
         $data = [
             'user_id' => $userId,
             'state_id' => $stateId,
-            'city_id' => $cityId,
+            'city_id' => $cityId === 0 ? null : $cityId,
             'created_by' => getCurrentUserId()
         ];
         
@@ -199,6 +205,17 @@ class User extends Model {
      */
     public function removeEmployeeTerritory($id) {
         return $this->hardDeleteTerritory($id);
+    }
+    
+    /**
+     * Remove territory
+     * Alias for removeEmployeeTerritory for backward compatibility
+     * 
+     * @param int $id Territory ID
+     * @return bool Success or failure
+     */
+    public function removeTerritory($id) {
+        return $this->removeEmployeeTerritory($id);
     }
     
     /**

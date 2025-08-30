@@ -127,7 +127,7 @@ class LeadController {
             $address = sanitizeInput($_POST['address']);
             $state_id = (int)$_POST['state_id'];
             $city_id = !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null;
-            $status = sanitizeInput($_POST['status']);
+            $status = isset($_POST['status']) ? sanitizeInput($_POST['status']) : 'new';
             $other_reason = isset($_POST['other_reason']) ? sanitizeInput($_POST['other_reason']) : null;
             $follow_up_date = isset($_POST['follow_up_date']) ? sanitizeInput($_POST['follow_up_date']) : null;
             $remarks = sanitizeInput($_POST['remarks']);
@@ -330,7 +330,7 @@ class LeadController {
             $address = sanitizeInput($_POST['address']);
             $state_id = (int)$_POST['state_id'];
             $city_id = !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null;
-            $status = sanitizeInput($_POST['status']);
+            $status = isset($_POST['status']) ? sanitizeInput($_POST['status']) : 'new';
             $other_reason = isset($_POST['other_reason']) ? sanitizeInput($_POST['other_reason']) : null;
             $follow_up_date = isset($_POST['follow_up_date']) ? sanitizeInput($_POST['follow_up_date']) : null;
             $remarks = sanitizeInput($_POST['remarks']);
@@ -451,7 +451,7 @@ class LeadController {
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Sanitize input
-            $status = sanitizeInput($_POST['status']);
+            $status = isset($_POST['status']) ? sanitizeInput($_POST['status']) : 'new';
             $other_reason = isset($_POST['other_reason']) ? sanitizeInput($_POST['other_reason']) : null;
             $follow_up_date = isset($_POST['follow_up_date']) ? sanitizeInput($_POST['follow_up_date']) : null;
             $remarks = sanitizeInput($_POST['remarks']);

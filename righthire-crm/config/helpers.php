@@ -9,6 +9,9 @@
  * Sanitize input
  */
 function sanitizeInput($input) {
+    if ($input === null) {
+        return '';
+    }
     return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
 }
 
@@ -272,4 +275,3 @@ function exportToCSV($data, $headers, $filename) {
     fclose($output);
     exit;
 }
-

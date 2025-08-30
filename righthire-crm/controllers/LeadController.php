@@ -50,14 +50,23 @@ class LeadController {
             'search' => isset($_GET['search']) ? sanitizeInput($_GET['search']) : null
         ];
         
+        // Get page number
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        
         // Get leads based on user role and filters
-        $leads = $this->leadModel->getLeads($filters);
+        $leads = $this->leadModel->getLeads($filters, true, $page);
+        
+        // Get total count for pagination
+        $totalCount = $this->leadModel->countLeads($filters);
+        $totalPages = ceil($totalCount / RECORDS_PER_PAGE);
         
         // Get states for filter
         $states = $this->stateModel->getActiveStates();
         
         // Get cities if state is selected
         $cities = [];
+        
+        // Pass pagination variables to view
         if (!empty($filters['state_id'])) {
             $cities = $this->cityModel->getCitiesByState($filters['state_id']);
         }
@@ -68,7 +77,19 @@ class LeadController {
             $employees = $this->userModel->getEmployees();
         }
         
+        // Pass pagination variables to view
+        $data = [
+            'leads' => $leads,
+            'states' => $states,
+            'cities' => $cities,
+            'employees' => $employees,
+            'filters' => $filters,
+            'page' => $page,
+            'totalPages' => $totalPages
+        ];
+        
         // Include view
+        extract($data);
         include 'views/leads/index.php';
     }
     
@@ -724,7 +745,7 @@ class LeadController {
             'search' => isset($_GET['search']) ? sanitizeInput($_GET['search']) : null
         ];
         
-        // Get leads based on user role and filters
+        // Get all leads for export (no pagination)
         $leads = $this->leadModel->getLeads($filters, false);
         
         if (empty($leads)) {
@@ -783,4 +804,3 @@ class LeadController {
         exit;
     }
 }
-

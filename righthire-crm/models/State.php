@@ -39,6 +39,16 @@ class State extends Model {
     }
     
     /**
+     * Get state by ID
+     * 
+     * @param int $id State ID
+     * @return array|null State data or null if not found
+     */
+    public function getById($id) {
+        return $this->find($id);
+    }
+    
+    /**
      * Check if state name exists
      */
     public function nameExists($name, $excludeId = null) {

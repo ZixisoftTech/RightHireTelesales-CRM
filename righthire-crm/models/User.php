@@ -61,6 +61,13 @@ class User extends Model {
     }
     
     /**
+     * Get user by ID
+     */
+    public function getById($id) {
+        return $this->find($id);
+    }
+    
+    /**
      * Get all users with lead count
      */
     public function getAllWithLeadCount($page = 1, $limit = RECORDS_PER_PAGE) {
@@ -83,6 +90,24 @@ class User extends Model {
     public function getAllActiveEmployees() {
         $sql = "SELECT * FROM {$this->table} WHERE role = 'employee' AND status = 1 AND deleted_at IS NULL ORDER BY name ASC";
         return $this->db->getRows($sql);
+    }
+    
+    /**
+     * Get all employees (active and inactive)
+     */
+    public function getEmployees() {
+        $sql = "SELECT * FROM {$this->table} WHERE role = 'employee' AND deleted_at IS NULL ORDER BY name ASC";
+        return $this->db->getRows($sql);
+    }
+    
+    /**
+     * Get available roles
+     */
+    public function getRoles() {
+        return [
+            ['id' => 'administrator', 'name' => 'Administrator'],
+            ['id' => 'employee', 'name' => 'Employee']
+        ];
     }
     
     /**

@@ -19,6 +19,141 @@ class Lead extends Model {
     }
     
     /**
+     * Get leads based on filters
+     * 
+     * @param array $filters Filter parameters
+     * @param bool $paginate Whether to paginate results
+     * @param int $page Page number
+     * @param int $limit Records per page
+     * @return array Leads matching the filters
+     */
+    public function getLeads($filters = [], $paginate = true, $page = 1, $limit = RECORDS_PER_PAGE) {
+        $params = [];
+        
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
+                FROM {$this->table} l
+                LEFT JOIN states s ON l.state_id = s.id
+                LEFT JOIN cities c ON l.city_id = c.id
+                LEFT JOIN users u ON l.assigned_to = u.id
+                WHERE l.deleted_at IS NULL";
+        
+        // Apply filters
+        if (!empty($filters['state_id'])) {
+            $sql .= " AND l.state_id = ?";
+            $params[] = $filters['state_id'];
+        }
+        
+        if (!empty($filters['city_id'])) {
+            $sql .= " AND l.city_id = ?";
+            $params[] = $filters['city_id'];
+        }
+        
+        if (!empty($filters['status'])) {
+            $sql .= " AND l.status = ?";
+            $params[] = $filters['status'];
+        }
+        
+        if (!empty($filters['assigned_to'])) {
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $filters['assigned_to'];
+        }
+        
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND DATE(l.created_at) >= ?";
+            $params[] = $filters['date_from'];
+        }
+        
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND DATE(l.created_at) <= ?";
+            $params[] = $filters['date_to'];
+        }
+        
+        if (!empty($filters['search'])) {
+            $sql .= " AND (l.name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        
+        // Check user role and restrict to assigned leads if not admin
+        if (!hasRole('administrator') && !isset($filters['assigned_to'])) {
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = getCurrentUserId();
+        }
+        
+        $sql .= " ORDER BY l.id DESC";
+        
+        if ($paginate) {
+            $offset = ($page - 1) * $limit;
+            $sql .= " LIMIT ?, ?";
+            $params[] = $offset;
+            $params[] = $limit;
+        }
+        
+        return $this->db->getRows($sql, $params);
+    }
+    
+    /**
+     * Count leads based on filters
+     * 
+     * @param array $filters Filter parameters
+     * @return int Number of leads matching the filters
+     */
+    public function countLeads($filters = []) {
+        $params = [];
+        
+        $sql = "SELECT COUNT(*) FROM {$this->table} l WHERE l.deleted_at IS NULL";
+        
+        // Apply filters
+        if (!empty($filters['state_id'])) {
+            $sql .= " AND l.state_id = ?";
+            $params[] = $filters['state_id'];
+        }
+        
+        if (!empty($filters['city_id'])) {
+            $sql .= " AND l.city_id = ?";
+            $params[] = $filters['city_id'];
+        }
+        
+        if (!empty($filters['status'])) {
+            $sql .= " AND l.status = ?";
+            $params[] = $filters['status'];
+        }
+        
+        if (!empty($filters['assigned_to'])) {
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $filters['assigned_to'];
+        }
+        
+        if (!empty($filters['date_from'])) {
+            $sql .= " AND DATE(l.created_at) >= ?";
+            $params[] = $filters['date_from'];
+        }
+        
+        if (!empty($filters['date_to'])) {
+            $sql .= " AND DATE(l.created_at) <= ?";
+            $params[] = $filters['date_to'];
+        }
+        
+        if (!empty($filters['search'])) {
+            $sql .= " AND (l.name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        
+        // Check user role and restrict to assigned leads if not admin
+        if (!hasRole('administrator') && !isset($filters['assigned_to'])) {
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = getCurrentUserId();
+        }
+        
+        return $this->db->getValue($sql, $params);
+    }
+    
+    /**
      * Get all leads with related data
      */
     public function getAllWithRelatedData($page = 1, $limit = RECORDS_PER_PAGE) {
@@ -717,4 +852,3 @@ class Lead extends Model {
         }
     }
 }
-

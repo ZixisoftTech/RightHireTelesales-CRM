@@ -12,6 +12,13 @@ class City extends Model {
     protected $fillable = ['state_id', 'name', 'status', 'created_by', 'updated_by'];
     
     /**
+     * Constructor
+     */
+    public function __construct() {
+        parent::__construct();
+    }
+    
+    /**
      * Get all cities with state name
      */
     public function getAllWithStateName($page = 1, $limit = RECORDS_PER_PAGE) {
@@ -36,12 +43,22 @@ class City extends Model {
     }
     
     /**
-     * Get cities by state ID
+     * Get cities by state ID - Alias for getByState for backward compatibility
      * 
      * @param int $stateId State ID
      * @return array Cities belonging to the state
      */
     public function getByStateId($stateId) {
+        return $this->getByState($stateId);
+    }
+    
+    /**
+     * Get cities by state - Alias for getByState for backward compatibility
+     * 
+     * @param int $stateId State ID
+     * @return array Cities belonging to the state
+     */
+    public function getCitiesByState($stateId) {
         return $this->getByState($stateId);
     }
     

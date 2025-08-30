@@ -81,7 +81,7 @@ class UserController {
             $email = sanitizeInput($_POST['email']);
             $password = $_POST['password'];
             $confirmPassword = $_POST['confirm_password'];
-            $roleId = (int)$_POST['role_id'];
+            $role = sanitizeInput($_POST['role']);
             
             // Validate input
             $errors = [];
@@ -106,7 +106,7 @@ class UserController {
                 $errors[] = 'Passwords do not match';
             }
             
-            if (empty($roleId)) {
+            if (empty($role)) {
                 $errors[] = 'Role is required';
             }
             
@@ -116,7 +116,7 @@ class UserController {
                     'name' => $name,
                     'email' => $email,
                     'password' => password_hash($password, PASSWORD_DEFAULT, ['cost' => PASSWORD_HASH_COST]),
-                    'role_id' => $roleId,
+                    'role' => $role,
                     'status' => 1,
                     'created_by' => $_SESSION['user_id']
                 ];
@@ -182,7 +182,7 @@ class UserController {
             $email = sanitizeInput($_POST['email']);
             $password = $_POST['password'];
             $confirmPassword = $_POST['confirm_password'];
-            $roleId = (int)$_POST['role_id'];
+            $role = sanitizeInput($_POST['role']);
             
             // Validate input
             $errors = [];
@@ -205,7 +205,7 @@ class UserController {
                 $errors[] = 'Passwords do not match';
             }
             
-            if (empty($roleId)) {
+            if (empty($role)) {
                 $errors[] = 'Role is required';
             }
             
@@ -214,7 +214,7 @@ class UserController {
                 $data = [
                     'name' => $name,
                     'email' => $email,
-                    'role_id' => $roleId,
+                    'role' => $role,
                     'updated_by' => $_SESSION['user_id']
                 ];
                 
@@ -568,4 +568,3 @@ class UserController {
         include 'views/users/profile.php';
     }
 }
-

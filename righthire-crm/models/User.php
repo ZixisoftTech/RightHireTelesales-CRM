@@ -156,6 +156,19 @@ class User extends Model {
     }
     
     /**
+     * Add territory to a user
+     * Alias for addEmployeeTerritory for backward compatibility
+     * 
+     * @param int $userId User ID
+     * @param int $stateId State ID
+     * @param int|null $cityId City ID (optional)
+     * @return int|bool ID of created territory or false on failure
+     */
+    public function addTerritory($userId, $stateId, $cityId = null) {
+        return $this->addEmployeeTerritory($userId, $stateId, $cityId);
+    }
+    
+    /**
      * Add employee territory
      */
     public function addEmployeeTerritory($userId, $stateId, $cityId = null) {

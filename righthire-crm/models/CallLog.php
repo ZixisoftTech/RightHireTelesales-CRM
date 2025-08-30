@@ -218,5 +218,14 @@ class CallLog extends Model {
         
         return $this->db->getRow($sql, $params);
     }
+    
+    /**
+     * Create a new call log
+     * 
+     * @param array $data Call log data
+     * @return int|bool ID of created call log or false on failure
+     */
+    public function createCallLog($data) {
+        return $this->create($data);
+    }
 }
-

@@ -172,6 +172,16 @@ class Lead extends Model {
     }
     
     /**
+     * Delete a lead (soft delete)
+     * 
+     * @param int $id Lead ID
+     * @return bool Success or failure
+     */
+    public function deleteLead($id) {
+        return $this->delete($id);
+    }
+    
+    /**
      * Get lead by ID with related data
      */
     public function getByIdWithRelatedData($id) {
@@ -183,6 +193,16 @@ class Lead extends Model {
                 WHERE l.id = ? AND l.deleted_at IS NULL";
         
         return $this->db->getRow($sql, [$id]);
+    }
+    
+    /**
+     * Get lead by ID
+     * 
+     * @param int $id Lead ID
+     * @return array|bool Lead data or false if not found
+     */
+    public function getLeadById($id) {
+        return $this->getByIdWithRelatedData($id);
     }
     
     /**

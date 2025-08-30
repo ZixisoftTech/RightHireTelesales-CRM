@@ -145,6 +145,17 @@ class User extends Model {
     }
     
     /**
+     * Get territories for a user
+     * Alias for getEmployeeTerritories for backward compatibility
+     * 
+     * @param int $userId User ID
+     * @return array Territories assigned to the user
+     */
+    public function getTerritories($userId) {
+        return $this->getEmployeeTerritories($userId);
+    }
+    
+    /**
      * Add employee territory
      */
     public function addEmployeeTerritory($userId, $stateId, $cityId = null) {
@@ -264,4 +275,3 @@ class User extends Model {
         return $this->db->getRows($sql, [$userId, $months]);
     }
 }
-

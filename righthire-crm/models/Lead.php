@@ -851,4 +851,14 @@ class Lead extends Model {
             throw $e;
         }
     }
+    
+    /**
+     * Create a new lead
+     * 
+     * @param array $data Lead data
+     * @return int|bool ID of created lead or false on failure
+     */
+    public function createLead($data) {
+        return $this->create($data);
+    }
 }

@@ -85,6 +85,26 @@ class User extends Model {
     }
     
     /**
+     * Get all users with role name
+     */
+    public function getAllWithRoleName($page = 1, $limit = RECORDS_PER_PAGE) {
+        $offset = ($page - 1) * $limit;
+        
+        $sql = "SELECT u.*, 
+                CASE 
+                    WHEN u.role = 'administrator' THEN 'Administrator' 
+                    WHEN u.role = 'employee' THEN 'Employee' 
+                    ELSE u.role 
+                END AS role_name
+                FROM {$this->table} u
+                WHERE u.deleted_at IS NULL
+                ORDER BY u.id DESC
+                LIMIT ?, ?";
+        
+        return $this->db->getRows($sql, [$offset, $limit]);
+    }
+    
+    /**
      * Get all active employees
      */
     public function getAllActiveEmployees() {

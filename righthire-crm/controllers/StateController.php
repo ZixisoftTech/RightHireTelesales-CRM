@@ -7,7 +7,7 @@
 
 require_once 'models/State.php';
 require_once 'models/City.php';
-require_once 'config/Database.php';
+require_once 'config/database.php';
 
 class StateController {
     private $stateModel;

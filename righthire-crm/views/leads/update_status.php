@@ -58,26 +58,27 @@
                         <select class="form-select" id="status" name="status" required>
                             <option value="">Select Status</option>
                             <option value="new" <?php echo isset($_POST['status']) && $_POST['status'] === 'new' ? 'selected' : ''; ?>>New</option>
-                            <option value="follow_up" <?php echo isset($_POST['status']) && $_POST['status'] === 'follow_up' ? 'selected' : ''; ?>>Follow-up</option>
                             <option value="not_attend" <?php echo isset($_POST['status']) && $_POST['status'] === 'not_attend' ? 'selected' : ''; ?>>Not Attend</option>
                             <option value="wrong_number" <?php echo isset($_POST['status']) && $_POST['status'] === 'wrong_number' ? 'selected' : ''; ?>>Wrong Number</option>
-                            <option value="other" <?php echo isset($_POST['status']) && $_POST['status'] === 'other' ? 'selected' : ''; ?>>Other</option>
-                            <option value="dead" <?php echo isset($_POST['status']) && $_POST['status'] === 'dead' ? 'selected' : ''; ?>>Dead</option>
                             <option value="interested" <?php echo isset($_POST['status']) && $_POST['status'] === 'interested' ? 'selected' : ''; ?>>Interested</option>
-                            <option value="win" <?php echo isset($_POST['status']) && $_POST['status'] === 'win' ? 'selected' : ''; ?>>Win</option>
+                            <option value="lost" <?php echo isset($_POST['status']) && $_POST['status'] === 'lost' ? 'selected' : ''; ?>>Lost</option>
+                            <option value="won" <?php echo isset($_POST['status']) && $_POST['status'] === 'won' ? 'selected' : ''; ?>>Won</option>
                         </select>
                     </div>
-                    <div id="other-reason-group" class="mb-3 <?php echo isset($_POST['status']) && $_POST['status'] === 'other' ? '' : 'd-none'; ?>">
-                        <label for="other_reason" class="form-label required">Other Reason</label>
-                        <input type="text" class="form-control" id="other_reason" name="other_reason" value="<?php echo isset($_POST['other_reason']) ? htmlspecialchars($_POST['other_reason']) : ''; ?>">
+                    <div id="region-group" class="mb-3 d-none">
+                        <label for="region" class="form-label required">Region</label>
+                        <input type="text" class="form-control" id="region" name="region" value="<?php echo isset($_POST['region']) ? htmlspecialchars($_POST['region']) : ''; ?>">
+                        <div class="form-text">Required for Lost status</div>
                     </div>
-                    <div id="follow-up-date-group" class="mb-3 <?php echo isset($_POST['status']) && $_POST['status'] === 'follow_up' ? '' : 'd-none'; ?>">
+                    <div id="follow-up-date-group" class="mb-3 d-none">
                         <label for="follow_up_date" class="form-label required">Follow-up Date</label>
                         <input type="text" class="form-control datetimepicker" id="follow_up_date" name="follow_up_date" value="<?php echo isset($_POST['follow_up_date']) ? htmlspecialchars($_POST['follow_up_date']) : ''; ?>">
+                        <div class="form-text">Required for Interested status</div>
                     </div>
                     <div class="mb-3">
                         <label for="remarks" class="form-label">Remarks</label>
                         <textarea class="form-control" id="remarks" name="remarks" rows="3"><?php echo isset($_POST['remarks']) ? htmlspecialchars($_POST['remarks']) : ''; ?></textarea>
+                        <div id="remarks-help" class="form-text"></div>
                     </div>
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $lead['id']; ?>" class="btn btn-secondary">Cancel</a>
@@ -88,6 +89,50 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.getElementById('status');
+    const regionGroup = document.getElementById('region-group');
+    const followUpDateGroup = document.getElementById('follow-up-date-group');
+    const remarksHelp = document.getElementById('remarks-help');
+    const remarksField = document.getElementById('remarks');
+    
+    statusSelect.addEventListener('change', function() {
+        // Hide all conditional fields first
+        regionGroup.classList.add('d-none');
+        followUpDateGroup.classList.add('d-none');
+        remarksHelp.textContent = '';
+        
+        // Reset required attributes
+        document.getElementById('region').required = false;
+        document.getElementById('follow_up_date').required = false;
+        remarksField.required = false;
+        
+        // Show fields based on selected status
+        const selectedStatus = this.value;
+        
+        if (selectedStatus === 'lost') {
+            regionGroup.classList.remove('d-none');
+            document.getElementById('region').required = true;
+        }
+        
+        if (selectedStatus === 'interested') {
+            followUpDateGroup.classList.remove('d-none');
+            document.getElementById('follow_up_date').required = true;
+        }
+        
+        if (selectedStatus === 'not_attend' || selectedStatus === 'wrong_number') {
+            remarksHelp.textContent = 'Remarks are required for ' + 
+                (selectedStatus === 'not_attend' ? 'Not Attend' : 'Wrong Number') + ' status';
+            remarksField.required = true;
+        }
+    });
+    
+    // Trigger change event to set initial state
+    statusSelect.dispatchEvent(new Event('change'));
+});
+</script>
 
 <?php include 'views/templates/footer.php'; ?>
 

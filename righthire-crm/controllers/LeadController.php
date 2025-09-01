@@ -127,10 +127,9 @@ class LeadController {
             $address = sanitizeInput($_POST['address']);
             $state_id = (int)$_POST['state_id'];
             $city_id = !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null;
-            $status = isset($_POST['status']) ? sanitizeInput($_POST['status']) : 'new';
-            $other_reason = isset($_POST['other_reason']) ? sanitizeInput($_POST['other_reason']) : null;
-            $follow_up_date = isset($_POST['follow_up_date']) ? sanitizeInput($_POST['follow_up_date']) : null;
-            $remarks = sanitizeInput($_POST['remarks']);
+            // Always set status to 'new' for new leads
+            $status = 'new';
+            $remarks = isset($_POST['remarks']) ? sanitizeInput($_POST['remarks']) : '';
             $assigned_to = isset($_POST['assigned_to']) && !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
             
             // Validate input
@@ -148,18 +147,6 @@ class LeadController {
                 $errors[] = 'State is required';
             }
             
-            if (empty($status)) {
-                $errors[] = 'Status is required';
-            }
-            
-            if ($status === 'follow_up' && empty($follow_up_date)) {
-                $errors[] = 'Follow-up date is required for follow-up status';
-            }
-            
-            if ($status === 'other' && empty($other_reason)) {
-                $errors[] = 'Other reason is required for other status';
-            }
-            
             // If no errors, create lead
             if (empty($errors)) {
                 try {
@@ -172,8 +159,6 @@ class LeadController {
                         'state_id' => $state_id,
                         'city_id' => $city_id,
                         'status' => $status,
-                        'other_reason' => $other_reason,
-                        'follow_up_date' => $follow_up_date,
                         'remarks' => $remarks,
                         'assigned_to' => $assigned_to
                     ];
@@ -185,8 +170,6 @@ class LeadController {
                         $callLogData = [
                             'lead_id' => $leadId,
                             'status' => $status,
-                            'other_reason' => $other_reason,
-                            'follow_up_date' => $follow_up_date,
                             'remarks' => $remarks
                         ];
                         
@@ -464,10 +447,6 @@ class LeadController {
             }
             
             // Status-specific validation
-            if ($status === 'follow_up' && empty($follow_up_date)) {
-                $errors[] = 'Follow-up date is required for Follow-up status';
-            }
-            
             if ($status === 'interested' && empty($follow_up_date)) {
                 $errors[] = 'Follow-up date is required for Interested status';
             }
@@ -476,7 +455,7 @@ class LeadController {
                 $errors[] = 'Remarks are required for ' . ucwords(str_replace('_', ' ', $status)) . ' status';
             }
             
-            if ($status === 'dead' && empty($region)) {
+            if ($status === 'lost' && empty($region)) {
                 $errors[] = 'Region is required for Lost status';
             }
             
@@ -491,8 +470,8 @@ class LeadController {
                     $leadData = [
                         'status' => $status,
                         'remarks' => $remarks,
-                        'region' => $status === 'dead' ? $region : null,
-                        'follow_up_date' => in_array($status, ['follow_up', 'interested']) ? $follow_up_date : null
+                        'region' => $status === 'lost' ? $region : null,
+                        'follow_up_date' => $status === 'interested' ? $follow_up_date : null
                     ];
                     
                     $result = $this->leadModel->updateLead($id, $leadData);
@@ -503,7 +482,7 @@ class LeadController {
                             'lead_id' => $id,
                             'status' => $status,
                             'remarks' => $remarks,
-                            'follow_up_date' => in_array($status, ['follow_up', 'interested']) ? $follow_up_date : null
+                            'follow_up_date' => $status === 'interested' ? $follow_up_date : null
                         ];
                         
                         $this->callLogModel->createCallLog($callLogData);
@@ -768,6 +747,9 @@ class LeadController {
     /**
      * Export leads
      */
+    /**
+     * Export leads to CSV
+     */
     public function export() {
         // Check if user is logged in
         if (!isLoggedIn()) {
@@ -796,8 +778,10 @@ class LeadController {
         }
         
         // Set headers for CSV download
-        header('Content-Type: text/csv');
+        header('Content-Type: text/csv; charset=UTF-8');
         header('Content-Disposition: attachment; filename="leads_export_' . date('Y-m-d') . '.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
         
         // Create output stream
         $output = fopen('php://output', 'w');
@@ -815,8 +799,9 @@ class LeadController {
             'State',
             'City',
             'Status',
-            'Other Reason',
+            'Region',
             'Follow-up Date',
+            'Remarks',
             'Assigned To',
             'Created At',
             'Updated At'
@@ -824,6 +809,9 @@ class LeadController {
         
         // Add data rows
         foreach ($leads as $lead) {
+            // Format status for better readability
+            $status = ucfirst(str_replace('_', ' ', $lead['status']));
+            
             fputcsv($output, [
                 $lead['id'],
                 $lead['name'],
@@ -832,9 +820,10 @@ class LeadController {
                 $lead['address'],
                 $lead['state_name'],
                 $lead['city_name'],
-                $lead['status'],
-                $lead['other_reason'],
-                $lead['follow_up_date'],
+                $status,
+                $lead['region'] ?? '',
+                $lead['follow_up_date'] ?? '',
+                $lead['remarks'] ?? '',
                 $lead['assigned_to_name'],
                 $lead['created_at'],
                 $lead['updated_at']
@@ -844,4 +833,4 @@ class LeadController {
         fclose($output);
         exit;
     }
-}
+

@@ -87,43 +87,7 @@
                     </div>
                 </div>
                 
-                <div class="col-md-6 mb-3">
-                    <div class="form-floating">
-                        <select class="form-select" id="status" name="status" required>
-                            <option value="">Select Status</option>
-                            <option value="new" <?php echo (isset($_POST['status']) && $_POST['status'] == 'new') ? 'selected' : ''; ?>>New</option>
-                            <option value="follow_up" <?php echo (isset($_POST['status']) && $_POST['status'] == 'follow_up') ? 'selected' : ''; ?>>Follow-up</option>
-                            <option value="not_attend" <?php echo (isset($_POST['status']) && $_POST['status'] == 'not_attend') ? 'selected' : ''; ?>>Not Attend</option>
-                            <option value="wrong_number" <?php echo (isset($_POST['status']) && $_POST['status'] == 'wrong_number') ? 'selected' : ''; ?>>Wrong Number</option>
-                            <option value="other" <?php echo (isset($_POST['status']) && $_POST['status'] == 'other') ? 'selected' : ''; ?>>Other</option>
-                            <option value="dead" <?php echo (isset($_POST['status']) && $_POST['status'] == 'dead') ? 'selected' : ''; ?>>Dead</option>
-                            <option value="interested" <?php echo (isset($_POST['status']) && $_POST['status'] == 'interested') ? 'selected' : ''; ?>>Interested</option>
-                            <option value="win" <?php echo (isset($_POST['status']) && $_POST['status'] == 'win') ? 'selected' : ''; ?>>Win</option>
-                        </select>
-                        <label for="status" class="required">Status</label>
-                        <div class="invalid-feedback">Please select a status.</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row status-dependent" id="follow_up_date_group" style="display: none;">
-                <div class="col-md-6 mb-3">
-                    <div class="form-floating">
-                        <input type="text" class="form-control datetimepicker" id="follow_up_date" name="follow_up_date" placeholder="Follow-up Date & Time" value="<?php echo isset($_POST['follow_up_date']) ? htmlspecialchars($_POST['follow_up_date']) : ''; ?>">
-                        <label for="follow_up_date">Follow-up Date & Time</label>
-                        <div class="invalid-feedback">Please select a follow-up date and time.</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row status-dependent" id="other_reason_group" style="display: none;">
-                <div class="col-md-6 mb-3">
-                    <div class="form-floating">
-                        <input type="text" class="form-control" id="other_reason" name="other_reason" placeholder="Other Reason" value="<?php echo isset($_POST['other_reason']) ? htmlspecialchars($_POST['other_reason']) : ''; ?>">
-                        <label for="other_reason">Other Reason</label>
-                        <div class="invalid-feedback">Please provide a reason.</div>
-                    </div>
-                </div>
+                <!-- Status field removed as it's automatically set to 'new' -->
             </div>
             
             <div class="row">
@@ -176,35 +140,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize status-dependent fields
-        const statusSelect = document.getElementById('status');
-        const followUpDateGroup = document.getElementById('follow_up_date_group');
-        const otherReasonGroup = document.getElementById('other_reason_group');
-        const followUpDateInput = document.getElementById('follow_up_date');
-        const otherReasonInput = document.getElementById('other_reason');
-        
-        statusSelect.addEventListener('change', function() {
-            // Hide all conditional fields first
-            followUpDateGroup.style.display = 'none';
-            otherReasonGroup.style.display = 'none';
-            
-            // Remove required attribute
-            followUpDateInput.removeAttribute('required');
-            otherReasonInput.removeAttribute('required');
-            
-            // Show relevant fields based on status
-            if (this.value === 'follow_up') {
-                followUpDateGroup.style.display = 'flex';
-                followUpDateInput.setAttribute('required', 'required');
-            } else if (this.value === 'other') {
-                otherReasonGroup.style.display = 'flex';
-                otherReasonInput.setAttribute('required', 'required');
-            }
-        });
-        
-        // Trigger change event on page load
-        statusSelect.dispatchEvent(new Event('change'));
-        
         // State-City Dependency
         const stateSelect = document.getElementById('state_id');
         const citySelect = document.getElementById('city_id');

@@ -33,26 +33,45 @@ class DashboardController {
             exit;
         }
         
-        // Get lead statistics
-        $stats = $this->leadModel->getLeadStats();
+        // Get filter parameters
+        $employeeId = isset($_GET['employee_id']) ? (int)$_GET['employee_id'] : 0;
+        $startDate = isset($_GET['start_date']) ? sanitizeInput($_GET['start_date']) : '';
+        $endDate = isset($_GET['end_date']) ? sanitizeInput($_GET['end_date']) : '';
+        $status = isset($_GET['status']) ? sanitizeInput($_GET['status']) : '';
         
-        // Get today's follow-ups
-        $todayFollowUps = $this->leadModel->getTodayFollowUps();
+        // Validate employee access for non-admins
+        if (!hasRole('administrator') && $employeeId !== 0 && $employeeId !== getCurrentUserId()) {
+            $employeeId = getCurrentUserId();
+        }
         
-        // Get daily call count
-        $dailyCallCount = $this->leadModel->getDailyCallCount();
+        // Get lead statistics with filters
+        $stats = $this->leadModel->getLeadStats($employeeId, $startDate, $endDate, $status);
         
-        // Get recent call logs
-        $recentCalls = $this->leadModel->getRecentCallLogs();
+        // Get today's follow-ups with filters
+        $todayFollowUps = $this->leadModel->getTodayFollowUps($employeeId);
+        
+        // Get missed follow-ups
+        $missedFollowUps = $this->leadModel->getMissedFollowUps($employeeId);
+        
+        // Get daily call count with filters
+        $dailyCallCount = $this->leadModel->getDailyCallCount($employeeId, $startDate, $endDate);
+        
+        // Get recent call logs with filters
+        $recentCalls = $this->leadModel->getRecentCallLogs($employeeId, $startDate, $endDate);
         
         // Get employee performance stats (admin only)
         $employeeStats = [];
         if (hasRole('administrator')) {
-            $employeeStats = $this->leadModel->getEmployeePerformanceStats();
+            $employeeStats = $this->leadModel->getEmployeePerformanceStats($employeeId, $startDate, $endDate);
+        }
+        
+        // Get all active employees for filter dropdown (admin only)
+        $employees = [];
+        if (hasRole('administrator')) {
+            $employees = $this->userModel->getAllActiveEmployees();
         }
         
         // Include view
         include 'views/dashboard/index.php';
     }
 }
-

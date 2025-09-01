@@ -522,38 +522,70 @@ class Lead extends Model {
     
     /**
      * Get lead statistics for dashboard
+     * 
+     * @param int $employeeId Employee ID to filter by (0 for all)
+     * @param string $startDate Start date for filtering (YYYY-MM-DD)
+     * @param string $endDate End date for filtering (YYYY-MM-DD)
+     * @param string $status Status to filter by
+     * @return array Lead statistics
      */
-    public function getLeadStats() {
+    public function getLeadStats($employeeId = 0, $startDate = '', $endDate = '', $status = '') {
         $userId = getCurrentUserId();
         $isAdmin = hasRole('administrator');
         
         // Base SQL for counting leads by status
         $sql = "SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new,
-                    SUM(CASE WHEN status = 'follow_up' THEN 1 ELSE 0 END) as follow_up,
+                    SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_leads,
+                    SUM(CASE WHEN status = 'follow_up' THEN 1 ELSE 0 END) as follow_ups,
                     SUM(CASE WHEN status = 'not_attend' THEN 1 ELSE 0 END) as not_attend,
                     SUM(CASE WHEN status = 'wrong_number' THEN 1 ELSE 0 END) as wrong_number,
                     SUM(CASE WHEN status = 'other' THEN 1 ELSE 0 END) as other,
                     SUM(CASE WHEN status = 'dead' THEN 1 ELSE 0 END) as dead,
                     SUM(CASE WHEN status = 'interested' THEN 1 ELSE 0 END) as interested,
-                    SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) as win
+                    SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) as wins
                 FROM {$this->table}
                 WHERE deleted_at IS NULL";
         
-        // If not admin, only show assigned leads
-        if (!$isAdmin) {
+        $params = [];
+        
+        // Apply employee filter
+        if ($employeeId > 0) {
             $sql .= " AND assigned_to = ?";
-            return $this->db->getRow($sql, [$userId]);
+            $params[] = $employeeId;
+        } else if (!$isAdmin) {
+            // If not admin and no specific employee selected, only show assigned leads
+            $sql .= " AND assigned_to = ?";
+            $params[] = $userId;
         }
         
-        return $this->db->getRow($sql);
+        // Apply date filters
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(created_at) >= ?";
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(created_at) <= ?";
+            $params[] = $endDate;
+        }
+        
+        // Apply status filter
+        if (!empty($status)) {
+            $sql .= " AND status = ?";
+            $params[] = $status;
+        }
+        
+        return $this->db->getRow($sql, $params);
     }
     
     /**
      * Get today's follow-ups
+     * 
+     * @param int $employeeId Employee ID to filter by (0 for all)
+     * @return array Today's follow-ups
      */
-    public function getTodayFollowUps() {
+    public function getTodayFollowUps($employeeId = 0) {
         $userId = getCurrentUserId();
         $isAdmin = hasRole('administrator');
         $today = date('Y-m-d');
@@ -567,47 +599,118 @@ class Lead extends Model {
                 AND l.status = 'follow_up' 
                 AND DATE(l.follow_up_date) = ?";
         
-        // If not admin, only show assigned leads
-        if (!$isAdmin) {
+        $params = [$today];
+        
+        // Apply employee filter
+        if ($employeeId > 0) {
             $sql .= " AND l.assigned_to = ?";
-            $sql .= " ORDER BY l.follow_up_date ASC LIMIT 10";
-            return $this->db->getRows($sql, [$today, $userId]);
+            $params[] = $employeeId;
+        } else if (!$isAdmin) {
+            // If not admin and no specific employee selected, only show assigned leads
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $userId;
         }
         
-        $sql .= " ORDER BY l.follow_up_date ASC LIMIT 10";
-        return $this->db->getRows($sql, [$today]);
+        $sql .= " ORDER BY l.follow_up_date ASC";
+        
+        return $this->db->getRows($sql, $params);
+    }
+    
+    /**
+     * Get missed follow-ups
+     * 
+     * @param int $employeeId Employee ID to filter by (0 for all)
+     * @return array Missed follow-ups
+     */
+    public function getMissedFollowUps($employeeId = 0) {
+        $userId = getCurrentUserId();
+        $isAdmin = hasRole('administrator');
+        $today = date('Y-m-d');
+        
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
+                FROM {$this->table} l
+                LEFT JOIN states s ON l.state_id = s.id
+                LEFT JOIN cities c ON l.city_id = c.id
+                LEFT JOIN users u ON l.assigned_to = u.id
+                WHERE l.deleted_at IS NULL 
+                AND l.status = 'follow_up' 
+                AND DATE(l.follow_up_date) < ?
+                AND l.follow_up_date IS NOT NULL";
+        
+        $params = [$today];
+        
+        // Apply employee filter
+        if ($employeeId > 0) {
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $employeeId;
+        } else if (!$isAdmin) {
+            // If not admin and no specific employee selected, only show assigned leads
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $userId;
+        }
+        
+        $sql .= " ORDER BY l.follow_up_date ASC";
+        
+        return $this->db->getRows($sql, $params);
     }
     
     /**
      * Get daily call count
+     * 
+     * @param int $employeeId Employee ID to filter by (0 for all)
+     * @param string $startDate Start date for filtering (YYYY-MM-DD)
+     * @param string $endDate End date for filtering (YYYY-MM-DD)
+     * @return array Daily call counts
      */
-    public function getDailyCallCount() {
+    public function getDailyCallCount($employeeId = 0, $startDate = '', $endDate = '') {
         $userId = getCurrentUserId();
         $isAdmin = hasRole('administrator');
         
-        // Get call counts for the last 7 days
+        // Get call counts for the last 7 days by default
         $sql = "SELECT 
                     DATE(created_at) as call_date,
                     COUNT(*) as call_count
                 FROM call_logs
-                WHERE deleted_at IS NULL
-                AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+                WHERE deleted_at IS NULL";
         
-        // If not admin, only show calls made by the user
-        if (!$isAdmin) {
+        $params = [];
+        
+        // Apply date filters
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(created_at) >= ?";
+            $params[] = $startDate;
+        } else {
+            $sql .= " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(created_at) <= ?";
+            $params[] = $endDate;
+        }
+        
+        // Apply employee filter
+        if ($employeeId > 0) {
             $sql .= " AND created_by = ?";
-            $sql .= " GROUP BY DATE(created_at) ORDER BY call_date ASC";
-            return $this->db->getRows($sql, [$userId]);
+            $params[] = $employeeId;
+        } else if (!$isAdmin) {
+            // If not admin and no specific employee selected, only show calls made by the user
+            $sql .= " AND created_by = ?";
+            $params[] = $userId;
         }
         
         $sql .= " GROUP BY DATE(created_at) ORDER BY call_date ASC";
-        return $this->db->getRows($sql);
+        return $this->db->getRows($sql, $params);
     }
     
     /**
      * Get recent call logs
+     * 
+     * @param int $employeeId Employee ID to filter by (0 for all)
+     * @param string $startDate Start date for filtering (YYYY-MM-DD)
+     * @param string $endDate End date for filtering (YYYY-MM-DD)
+     * @return array Recent call logs
      */
-    public function getRecentCallLogs() {
+    public function getRecentCallLogs($employeeId = 0, $startDate = '', $endDate = '') {
         $userId = getCurrentUserId();
         $isAdmin = hasRole('administrator');
         
@@ -617,37 +720,85 @@ class Lead extends Model {
                 LEFT JOIN users u ON cl.created_by = u.id
                 WHERE cl.deleted_at IS NULL";
         
-        // If not admin, only show calls made by the user or for leads assigned to the user
-        if (!$isAdmin) {
+        $params = [];
+        
+        // Apply employee filter
+        if ($employeeId > 0) {
             $sql .= " AND (cl.created_by = ? OR l.assigned_to = ?)";
-            $sql .= " ORDER BY cl.created_at DESC LIMIT 10";
-            return $this->db->getRows($sql, [$userId, $userId]);
+            $params[] = $employeeId;
+            $params[] = $employeeId;
+        } else if (!$isAdmin) {
+            // If not admin and no specific employee selected, only show calls made by the user or for leads assigned to the user
+            $sql .= " AND (cl.created_by = ? OR l.assigned_to = ?)";
+            $params[] = $userId;
+            $params[] = $userId;
+        }
+        
+        // Apply date filters
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(cl.created_at) >= ?";
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(cl.created_at) <= ?";
+            $params[] = $endDate;
         }
         
         $sql .= " ORDER BY cl.created_at DESC LIMIT 10";
-        return $this->db->getRows($sql);
+        return $this->db->getRows($sql, $params);
     }
     
     /**
      * Get employee performance stats for dashboard
+     * 
+     * @param int $employeeId Employee ID to filter by (0 for all)
+     * @param string $startDate Start date for filtering (YYYY-MM-DD)
+     * @param string $endDate End date for filtering (YYYY-MM-DD)
+     * @return array Employee performance stats
      */
-    public function getEmployeePerformanceStats() {
+    public function getEmployeePerformanceStats($employeeId = 0, $startDate = '', $endDate = '') {
         $sql = "SELECT 
                     u.id, 
                     u.name,
                     COUNT(DISTINCT l.id) as total_leads,
                     COUNT(DISTINCT cl.id) as total_calls,
-                    SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) as total_wins,
-                    SUM(CASE WHEN l.status = 'interested' THEN 1 ELSE 0 END) as total_interested
+                    SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) as wins,
+                    SUM(CASE WHEN l.status = 'interested' THEN 1 ELSE 0 END) as total_interested,
+                    ROUND(CASE WHEN COUNT(DISTINCT l.id) > 0 THEN 
+                        (SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) / COUNT(DISTINCT l.id)) * 100 
+                    ELSE 0 END, 2) as conversion_rate
                 FROM users u
                 LEFT JOIN leads l ON u.id = l.assigned_to AND l.deleted_at IS NULL
                 LEFT JOIN call_logs cl ON l.id = cl.lead_id AND cl.deleted_at IS NULL
-                WHERE u.role = 'employee' AND u.deleted_at IS NULL
-                GROUP BY u.id, u.name
-                ORDER BY total_wins DESC, total_interested DESC
-                LIMIT 5";
+                WHERE u.role = 'employee' AND u.deleted_at IS NULL";
         
-        return $this->db->getRows($sql);
+        $params = [];
+        
+        // Apply employee filter
+        if ($employeeId > 0) {
+            $sql .= " AND u.id = ?";
+            $params[] = $employeeId;
+        }
+        
+        // Apply date filters
+        if (!empty($startDate)) {
+            $sql .= " AND (DATE(l.created_at) >= ? OR DATE(cl.created_at) >= ?)";
+            $params[] = $startDate;
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND (DATE(l.created_at) <= ? OR DATE(cl.created_at) <= ?)";
+            $params[] = $endDate;
+            $params[] = $endDate;
+        }
+        
+        $sql .= " GROUP BY u.id, u.name
+                  ORDER BY wins DESC, total_interested DESC
+                  LIMIT 5";
+        
+        return $this->db->getRows($sql, $params);
     }
     
     /**

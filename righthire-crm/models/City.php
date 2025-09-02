@@ -55,6 +55,17 @@ class City extends Model {
     }
     
     /**
+     * Get all cities by state ID
+     * 
+     * @param int $stateId State ID
+     * @return array All cities belonging to the state (including soft-deleted)
+     */
+    public function getAllByStateId($stateId) {
+        $sql = "SELECT * FROM {$this->table} WHERE state_id = ? ORDER BY name ASC";
+        return $this->db->getRows($sql, [$stateId]);
+    }
+    
+    /**
      * Get cities by state ID - Alias for getByState for backward compatibility
      * 
      * @param int $stateId State ID

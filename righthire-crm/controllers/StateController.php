@@ -219,14 +219,25 @@ class StateController {
                 $this->db->beginTransaction();
                 
                 try {
-                    // Soft delete leads associated with this state
-                    $this->db->query("UPDATE leads SET deleted_at = NOW(), updated_by = ? WHERE state_id = ? AND deleted_at IS NULL", [getCurrentUserId(), $id]);
+                    // First, get all cities in this state
+                    $cities = $this->cityModel->getAllByStateId($id);
+                    
+                    // For each city, soft delete leads associated with it
+                    foreach ($cities as $city) {
+                        $this->db->query("UPDATE leads SET deleted_at = NOW(), updated_by = ? WHERE city_id = ? AND deleted_at IS NULL", 
+                            [getCurrentUserId(), $city['id']]);
+                    }
+                    
+                    // Soft delete leads directly associated with this state (without city)
+                    $this->db->query("UPDATE leads SET deleted_at = NOW(), updated_by = ? WHERE state_id = ? AND deleted_at IS NULL", 
+                        [getCurrentUserId(), $id]);
                     
                     // Soft delete cities associated with this state
-                    $this->db->query("UPDATE cities SET deleted_at = NOW(), updated_by = ? WHERE state_id = ? AND deleted_at IS NULL", [getCurrentUserId(), $id]);
+                    $this->db->query("UPDATE cities SET deleted_at = NOW(), updated_by = ? WHERE state_id = ? AND deleted_at IS NULL", 
+                        [getCurrentUserId(), $id]);
                     
                     // Now delete the state
-                    $this->stateModel->hardDelete($id);
+                    $this->stateModel->softDelete($id);
                     
                     $this->db->commit();
                     setFlashMessage('success', 'State and all associated data deleted successfully');

@@ -213,10 +213,11 @@ class CityController {
                 
                 try {
                     // Soft delete leads associated with this city
-                    $this->db->query("UPDATE leads SET deleted_at = NOW(), updated_by = ? WHERE city_id = ? AND deleted_at IS NULL", [getCurrentUserId(), $id]);
+                    $this->db->query("UPDATE leads SET deleted_at = NOW(), updated_by = ? WHERE city_id = ? AND deleted_at IS NULL", 
+                        [getCurrentUserId(), $id]);
                     
-                    // Now delete the city
-                    $this->cityModel->hardDelete($id);
+                    // Now soft delete the city
+                    $this->cityModel->softDelete($id);
                     
                     $this->db->commit();
                     setFlashMessage('success', 'City and all associated data deleted successfully');

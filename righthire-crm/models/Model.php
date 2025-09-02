@@ -116,6 +116,18 @@ class Model {
      * Delete a record (soft delete)
      */
     public function delete($id) {
+        return $this->softDelete($id);
+    }
+    
+    /**
+     * Soft delete a record
+     * 
+     * This method marks a record as deleted by setting the deleted_at field
+     * 
+     * @param int $id Record ID
+     * @return bool Success or failure
+     */
+    public function softDelete($id) {
         // Get old values for audit
         $oldValues = $this->find($id);
         
@@ -202,4 +214,3 @@ class Model {
         $this->db->insert('audit_logs', $data);
     }
 }
-

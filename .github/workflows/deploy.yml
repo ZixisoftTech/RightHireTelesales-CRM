@@ -1,0 +1,32 @@
+name: Deploy CRM to Hostinger (Staging)
+
+on:
+  push:
+    branches: [ "31aug2025" ]   # Deploy only when pushing to branch 31aug2025
+  workflow_dispatch: {}          # Allow manual run from Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch 31aug2025
+        uses: actions/checkout@v4
+        with:
+          ref: 31aug2025
+
+      - name: Deploy via FTP to Staging
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /public_html/CRM_staging
+          protocol: ftp
+          exclude: |
+            **/.git*
+            **/.github/**
+            **/node_modules/**
+            **/tests/**
+            **/*.md
+            **/.env
+            config/config.php   # 👈 do not overwrite your live DB config

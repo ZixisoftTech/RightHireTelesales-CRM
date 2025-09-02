@@ -6,8 +6,7 @@
  */
 
 // Require header
-require_once 'views/partials/header.php';
-require_once 'views/partials/navbar.php';
+require_once __DIR__ . '/../../views/templates/header.php';
 ?>
 
 <div class="container mt-4">
@@ -48,6 +47,5 @@ require_once 'views/partials/navbar.php';
 
 <?php
 // Require footer
-require_once 'views/partials/footer.php';
+require_once __DIR__ . '/../../views/templates/footer.php';
 ?>
-

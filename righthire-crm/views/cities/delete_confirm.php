@@ -6,7 +6,7 @@
  */
 
 // Require header
-require_once __DIR__ . '/../templates/header.php';
+require_once VIEWS_PATH . '/templates/header.php';
 ?>
 
 <div class="container mt-4">
@@ -47,5 +47,5 @@ require_once __DIR__ . '/../templates/header.php';
 
 <?php
 // Require footer
-require_once __DIR__ . '/../templates/footer.php';
+require_once VIEWS_PATH . '/templates/footer.php';
 ?>

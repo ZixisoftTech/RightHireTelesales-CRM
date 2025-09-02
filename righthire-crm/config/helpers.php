@@ -5,6 +5,10 @@
  * This file contains helper functions used throughout the application.
  */
 
+// Define base path constant for consistent file includes
+define('BASE_PATH', dirname(__DIR__));
+define('VIEWS_PATH', BASE_PATH . '/views');
+
 /**
  * Sanitize input
  */

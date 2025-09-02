@@ -29,13 +29,11 @@
                     <select class="form-select" id="status" name="status">
                         <option value="">All Statuses</option>
                         <option value="new" <?php echo isset($filters['status']) && $filters['status'] === 'new' ? 'selected' : ''; ?>>New</option>
-                        <option value="follow_up" <?php echo isset($filters['status']) && $filters['status'] === 'follow_up' ? 'selected' : ''; ?>>Follow-up</option>
                         <option value="not_attend" <?php echo isset($filters['status']) && $filters['status'] === 'not_attend' ? 'selected' : ''; ?>>Not Attend</option>
                         <option value="wrong_number" <?php echo isset($filters['status']) && $filters['status'] === 'wrong_number' ? 'selected' : ''; ?>>Wrong Number</option>
-                        <option value="other" <?php echo isset($filters['status']) && $filters['status'] === 'other' ? 'selected' : ''; ?>>Other</option>
-                        <option value="dead" <?php echo isset($filters['status']) && $filters['status'] === 'dead' ? 'selected' : ''; ?>>Dead</option>
                         <option value="interested" <?php echo isset($filters['status']) && $filters['status'] === 'interested' ? 'selected' : ''; ?>>Interested</option>
-                        <option value="win" <?php echo isset($filters['status']) && $filters['status'] === 'win' ? 'selected' : ''; ?>>Win</option>
+                        <option value="won" <?php echo isset($filters['status']) && $filters['status'] === 'won' ? 'selected' : ''; ?>>Won</option>
+                        <option value="lost" <?php echo isset($filters['status']) && $filters['status'] === 'lost' ? 'selected' : ''; ?>>Lost</option>
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
@@ -153,4 +151,3 @@
 </div>
 
 <?php include 'views/templates/footer.php'; ?>
-

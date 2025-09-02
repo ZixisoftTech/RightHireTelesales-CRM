@@ -233,26 +233,20 @@ function getStatusBadge($status) {
         case 'new':
             $badgeClass = 'bg-primary';
             break;
-        case 'follow_up':
-            $badgeClass = 'bg-warning text-dark';
-            break;
         case 'not_attend':
             $badgeClass = 'bg-secondary';
             break;
         case 'wrong_number':
             $badgeClass = 'bg-danger';
             break;
-        case 'other':
-            $badgeClass = 'bg-secondary';
-            break;
-        case 'dead':
-            $badgeClass = 'bg-danger';
-            break;
         case 'interested':
             $badgeClass = 'bg-info';
             break;
-        case 'win':
+        case 'won':
             $badgeClass = 'bg-success';
+            break;
+        case 'lost':
+            $badgeClass = 'bg-danger';
             break;
     }
     
@@ -345,4 +339,3 @@ function hasAccessToTerritory($stateId, $cityId = null) {
     
     return $result['count'] > 0;
 }
-

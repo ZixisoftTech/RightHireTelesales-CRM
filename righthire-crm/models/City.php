@@ -12,6 +12,18 @@ class City extends Model {
     protected $fillable = ['state_id', 'name', 'status', 'created_by', 'updated_by'];
     
     /**
+     * Get city by name and state
+     * 
+     * @param string $name City name
+     * @param int $stateId State ID
+     * @return array|null City data or null if not found
+     */
+    public function getCityByNameAndState($name, $stateId) {
+        $sql = "SELECT * FROM {$this->table} WHERE name = ? AND state_id = ? AND deleted_at IS NULL LIMIT 1";
+        return $this->db->getRow($sql, [$name, $stateId]);
+    }
+    
+    /**
      * Constructor
      */
     public function __construct() {

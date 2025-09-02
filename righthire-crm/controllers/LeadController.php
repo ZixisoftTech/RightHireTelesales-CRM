@@ -396,7 +396,7 @@ class LeadController {
             }
             
             // Load confirmation view
-            include 'views/leads/delete_confirm.php';
+            include __DIR__ . '/../views/leads/delete_confirm.php';
         }
     }
     
@@ -784,4 +784,3 @@ class LeadController {
         exit;
     }
 }
-

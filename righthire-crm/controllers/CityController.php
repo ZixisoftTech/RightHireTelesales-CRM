@@ -233,13 +233,13 @@ class CityController {
                 // Show confirmation page with counts
                 $city = $this->cityModel->find($id);
                 $state = $this->stateModel->find($city['state_id']);
-                include 'views/cities/delete_confirm.php';
+                include __DIR__ . '/../views/cities/delete_confirm.php';
                 exit;
             }
         }
         
-        // Delete city (hard delete to allow reusing the name)
-        $result = $this->cityModel->hardDelete($id);
+        // Delete city (soft delete)
+        $result = $this->cityModel->softDelete($id);
         
         if ($result) {
             setFlashMessage('success', 'City deleted successfully');

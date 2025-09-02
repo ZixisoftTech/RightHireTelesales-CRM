@@ -252,13 +252,13 @@ class StateController {
             } else {
                 // Show confirmation page with counts
                 $state = $this->stateModel->getById($id);
-                include 'views/states/delete_confirm.php';
+                include __DIR__ . '/../views/states/delete_confirm.php';
                 exit;
             }
         }
         
-        // Delete state (hard delete to allow reusing the name)
-        $result = $this->stateModel->hardDelete($id);
+        // Delete state (soft delete)
+        $result = $this->stateModel->softDelete($id);
         
         if ($result) {
             setFlashMessage('success', 'State deleted successfully');

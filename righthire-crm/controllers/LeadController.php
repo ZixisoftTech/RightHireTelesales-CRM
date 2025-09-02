@@ -184,6 +184,50 @@ class LeadController {
     }
     
     /**
+     * View lead details
+     */
+    public function view() {
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
+        
+        // Check if ID is provided
+        if (!isset($_GET['id']) || empty($_GET['id'])) {
+            setFlashMessage('error', 'Invalid lead ID');
+            redirect('leads');
+            exit;
+        }
+        
+        // Get lead ID
+        $leadId = (int)$_GET['id'];
+        
+        // Get lead
+        $lead = $this->leadModel->getLeadById($leadId);
+        
+        // Check if lead exists
+        if (!$lead) {
+            setFlashMessage('error', 'Lead not found');
+            redirect('leads');
+            exit;
+        }
+        
+        // Check if user has access to this lead
+        if (!hasRole('administrator') && $lead['assigned_to'] != $_SESSION['user_id']) {
+            setFlashMessage('error', 'You do not have permission to view this lead');
+            redirect('leads');
+            exit;
+        }
+        
+        // Get call logs
+        $callLogs = $this->callLogModel->getCallLogsByLeadId($leadId);
+        
+        // Load view
+        include 'views/leads/view.php';
+    }
+    
+    /**
      * Edit page
      */
     public function edit() {
@@ -265,7 +309,6 @@ class LeadController {
             if (empty($errors)) {
                 // Prepare lead data
                 $leadData = [
-                    'id' => $leadId,
                     'name' => $name,
                     'email' => $email,
                     'phone' => $phone,
@@ -278,7 +321,7 @@ class LeadController {
                 ];
                 
                 // Update lead
-                $updated = $this->leadModel->updateLead($leadData);
+                $updated = $this->leadModel->updateLead($leadId, $leadData);
                 
                 if ($updated) {
                     // Set success message
@@ -442,18 +485,14 @@ class LeadController {
             
             // If no errors, update lead status
             if (empty($errors)) {
-                // Prepare lead data
-                $leadData = [
-                    'id' => $leadId,
-                    'status' => $status,
-                    'region' => $region,
-                    'follow_up_date' => $follow_up_date,
-                    'updated_by' => $_SESSION['user_id'],
-                    'updated_at' => date('Y-m-d H:i:s')
-                ];
-                
-                // Update lead
-                $updated = $this->leadModel->updateLeadStatus($leadData);
+                // Update lead status
+                $updated = $this->leadModel->updateStatus(
+                    $leadId, 
+                    $status, 
+                    $remarks, 
+                    $follow_up_date, 
+                    isset($region) ? $region : null
+                );
                 
                 if ($updated) {
                     // Create call log entry
@@ -745,3 +784,4 @@ class LeadController {
         exit;
     }
 }
+

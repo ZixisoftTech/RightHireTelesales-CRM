@@ -117,6 +117,26 @@ class Database {
     }
     
     /**
+     * Get single value (alias for getVar)
+     * 
+     * @param string $sql SQL query
+     * @param array $params Parameters
+     * @return mixed Value or false if not found
+     */
+    public function getValue($sql, $params = []) {
+        return $this->getVar($sql, $params);
+    }
+    
+    /**
+     * Get last insert ID
+     * 
+     * @return string Last insert ID
+     */
+    public function lastInsertId() {
+        return $this->conn->lastInsertId();
+    }
+    
+    /**
      * Insert data
      * 
      * @param string $table Table name
@@ -225,4 +245,3 @@ class Database {
         return $this->conn->rollBack();
     }
 }
-

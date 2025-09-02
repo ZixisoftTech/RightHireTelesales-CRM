@@ -12,6 +12,55 @@ class Lead extends Model {
     protected $fillable = ['name', 'email', 'phone', 'address', 'state_id', 'city_id', 'status', 'other_reason', 'follow_up_date', 'remarks', 'assigned_to'];
     
     /**
+     * Override the create method to handle city_id being NULL
+     * 
+     * @param array $data Lead data
+     * @return int|bool ID of created lead or false on failure
+     */
+    public function create($data) {
+        // If city_id is null, we need to handle it specially
+        if (!isset($data['city_id']) || $data['city_id'] === null) {
+            // Use a direct query to bypass the foreign key constraint
+            
+            // Add audit trail fields
+            if (isLoggedIn()) {
+                $data['created_by'] = getCurrentUserId();
+            }
+            
+            // Filter data to only include fillable fields
+            $filteredData = array_intersect_key($data, array_flip($this->fillable));
+            
+            // Prepare the SQL query
+            $columns = implode(', ', array_keys($filteredData));
+            $placeholders = implode(', ', array_fill(0, count($filteredData), '?'));
+            
+            $sql = "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeholders})";
+            
+            // Execute the query
+            try {
+                $this->db->beginTransaction();
+                $stmt = $this->db->query($sql, array_values($filteredData));
+                $id = $this->db->lastInsertId();
+                
+                // Log audit
+                if ($this->auditEnabled) {
+                    $this->logAudit('create', $id, null, $filteredData);
+                }
+                
+                $this->db->commit();
+                return $id;
+            } catch (Exception $e) {
+                $this->db->rollBack();
+                error_log("Error creating lead: " . $e->getMessage());
+                return false;
+            }
+        }
+        
+        // If city_id is set, use the parent create method
+        return parent::create($data);
+    }
+    
+    /**
      * Constructor
      */
     public function __construct() {
@@ -860,6 +909,13 @@ class Lead extends Model {
     
     /**
      * Update lead status
+     * 
+     * @param int $id Lead ID
+     * @param string $status New status
+     * @param string $remarks Remarks
+     * @param string|null $followUpDate Follow-up date
+     * @param string|null $otherReason Other reason
+     * @return bool Success or failure
      */
     public function updateStatus($id, $status, $remarks = '', $followUpDate = null, $otherReason = '') {
         // Start transaction

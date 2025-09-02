@@ -12,12 +12,18 @@ class Lead extends Model {
     protected $fillable = ['name', 'email', 'phone', 'address', 'state_id', 'city_id', 'status', 'other_reason', 'follow_up_date', 'remarks', 'assigned_to'];
     
     /**
-     * Override the create method to handle city_id being NULL
+     * Override the create method to handle city_id being NULL and assigned_to validation
      * 
      * @param array $data Lead data
      * @return int|bool ID of created lead or false on failure
      */
     public function create($data) {
+        // Handle assigned_to validation
+        if (isset($data['assigned_to']) && ($data['assigned_to'] === '' || $data['assigned_to'] === 0)) {
+            // If assigned_to is empty or 0, set it to NULL to satisfy foreign key constraint
+            $data['assigned_to'] = null;
+        }
+        
         // Ensure city_id is not null if state_id is provided
         if (isset($data['state_id']) && (!isset($data['city_id']) || $data['city_id'] === null || $data['city_id'] === '')) {
             // If no city_id is provided but state_id exists, set city_id to a default value

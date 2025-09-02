@@ -582,7 +582,7 @@ class LeadController {
             $stateId = isset($_POST['state_id']) ? (int)$_POST['state_id'] : null;
             
             // Get assigned to
-            $assignedTo = isset($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
+            $assignedTo = isset($_POST['assigned_to']) && !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
             
             // Open file
             $handle = fopen($fileTmpName, 'r');

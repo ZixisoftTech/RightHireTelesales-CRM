@@ -72,7 +72,7 @@ class CityController {
             if (empty($name)) {
                 $errors[] = 'Name is required';
             } elseif ($this->cityModel->nameExistsInState($name, $stateId)) {
-                $errors[] = 'City name already exists in this state';
+                $errors[] = 'City name already exists in this state or was previously deleted with leads still associated with it';
             }
             
             // If no errors, create city
@@ -151,7 +151,7 @@ class CityController {
             if (empty($name)) {
                 $errors[] = 'Name is required';
             } elseif ($this->cityModel->nameExistsInState($name, $stateId, $id)) {
-                $errors[] = 'City name already exists in this state';
+                $errors[] = 'City name already exists in this state or was previously deleted with leads still associated with it';
             }
             
             // If no errors, update city

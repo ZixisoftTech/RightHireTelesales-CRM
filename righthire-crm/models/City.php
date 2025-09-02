@@ -95,8 +95,17 @@ class City extends Model {
     
     /**
      * Check if city name exists in state
+     * 
+     * This method checks if a city with the given name already exists in the specified state.
+     * It can optionally exclude a specific city ID from the check (useful for updates).
+     * 
+     * @param string $name City name
+     * @param int $stateId State ID
+     * @param int|null $excludeId City ID to exclude from the check (optional)
+     * @return bool True if city name exists, false otherwise
      */
     public function nameExistsInState($name, $stateId, $excludeId = null) {
+        // Check active cities first
         $sql = "SELECT COUNT(*) FROM {$this->table} WHERE name = ? AND state_id = ? AND deleted_at IS NULL";
         $params = [$name, $stateId];
         
@@ -105,7 +114,35 @@ class City extends Model {
             $params[] = $excludeId;
         }
         
-        return $this->db->getValue($sql, $params) > 0;
+        $exists = $this->db->getValue($sql, $params) > 0;
+        
+        // If not found in active cities, also check soft-deleted cities
+        if (!$exists) {
+            $sql = "SELECT id FROM {$this->table} WHERE name = ? AND state_id = ? AND deleted_at IS NOT NULL";
+            $params = [$name, $stateId];
+            
+            if ($excludeId) {
+                $sql .= " AND id != ?";
+                $params[] = $excludeId;
+            }
+            
+            $softDeletedId = $this->db->getValue($sql, $params);
+            
+            if ($softDeletedId) {
+                // If there are any leads associated with this soft-deleted city,
+                // we need to consider it as "existing" to prevent recreation
+                $leadCount = $this->getLeadCount($softDeletedId);
+                if ($leadCount > 0) {
+                    return true;
+                }
+                
+                // If no leads are associated, we can safely hard delete it
+                // to allow recreation with the same name
+                $this->hardDeleteSoftDeleted($softDeletedId);
+            }
+        }
+        
+        return $exists;
     }
     
     /**
@@ -144,10 +181,17 @@ class City extends Model {
      * Get count of leads by city ID
      * 
      * @param int $id City ID
+     * @param bool $includeDeleted Whether to include soft-deleted leads in the count
      * @return int Number of leads
      */
-    public function getLeadCount($id) {
-        $sql = "SELECT COUNT(*) FROM leads WHERE city_id = ? AND deleted_at IS NULL";
+    public function getLeadCount($id, $includeDeleted = false) {
+        if ($includeDeleted) {
+            // Count all leads (including soft-deleted ones)
+            $sql = "SELECT COUNT(*) FROM leads WHERE city_id = ?";
+        } else {
+            // Count only active leads
+            $sql = "SELECT COUNT(*) FROM leads WHERE city_id = ? AND deleted_at IS NULL";
+        }
         return $this->db->getValue($sql, [$id]);
     }
     
@@ -163,8 +207,31 @@ class City extends Model {
      * @return bool Success or failure
      */
     public function hardDelete($id) {
-        // First check if there are any leads associated with this city
-        $leadCount = $this->getLeadCount($id);
+        // First check if there are any leads associated with this city (including soft-deleted leads)
+        $leadCount = $this->getLeadCount($id, true);
+        if ($leadCount > 0) {
+            // Cannot hard delete a city with associated leads
+            return false;
+        }
+        
+        // Safe to delete
+        $sql = "DELETE FROM {$this->table} WHERE id = ?";
+        $this->db->query($sql, [$id]);
+        return true;
+    }
+    
+    /**
+     * Hard delete a soft-deleted city
+     * 
+     * This method completely removes a soft-deleted city from the database,
+     * but only if there are no leads (including soft-deleted leads) associated with it.
+     * 
+     * @param int $id City ID
+     * @return bool Success or failure
+     */
+    public function hardDeleteSoftDeleted($id) {
+        // First check if there are any leads associated with this city (including soft-deleted leads)
+        $leadCount = $this->getLeadCount($id, true);
         if ($leadCount > 0) {
             // Cannot hard delete a city with associated leads
             return false;

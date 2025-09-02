@@ -233,7 +233,7 @@ class CityController {
                 // Show confirmation page with counts
                 $city = $this->cityModel->find($id);
                 $state = $this->stateModel->find($city['state_id']);
-                include __DIR__ . '/../views/cities/delete_confirm.php';
+                include VIEWS_PATH . '/cities/delete_confirm.php';
                 exit;
             }
         }

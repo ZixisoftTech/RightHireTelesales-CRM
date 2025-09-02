@@ -18,9 +18,30 @@ class Lead extends Model {
      * @return int|bool ID of created lead or false on failure
      */
     public function create($data) {
-        // If city_id is null, we need to handle it specially
-        if (!isset($data['city_id']) || $data['city_id'] === null) {
-            // Use a direct query to bypass the foreign key constraint
+        // Ensure city_id is not null if state_id is provided
+        if (isset($data['state_id']) && (!isset($data['city_id']) || $data['city_id'] === null || $data['city_id'] === '')) {
+            // If no city_id is provided but state_id exists, set city_id to a default value
+            // This is a workaround for the foreign key constraint
+            // In a real-world scenario, we might want to create a "Default" or "Unknown" city for each state
+            
+            // For now, we'll try to find the first active city in the state
+            $sql = "SELECT id FROM cities WHERE state_id = ? AND status = 1 AND deleted_at IS NULL ORDER BY id ASC LIMIT 1";
+            $defaultCityId = $this->db->getValue($sql, [$data['state_id']]);
+            
+            if ($defaultCityId) {
+                $data['city_id'] = $defaultCityId;
+            } else {
+                // If no cities exist for this state, we need to create one
+                $sql = "INSERT INTO cities (state_id, name, status, created_by, created_at) 
+                        VALUES (?, 'Default', 1, ?, NOW())";
+                $this->db->query($sql, [$data['state_id'], getCurrentUserId()]);
+                $data['city_id'] = $this->db->lastInsertId();
+            }
+        }
+        
+        // If city_id is still null after our attempts, log the error
+        if (!isset($data['city_id']) || $data['city_id'] === null || $data['city_id'] === '') {
+            error_log("Warning: Attempting to create lead with null city_id. Data: " . json_encode($data));
             
             // Add audit trail fields
             if (isLoggedIn()) {

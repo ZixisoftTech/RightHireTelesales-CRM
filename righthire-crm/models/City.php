@@ -157,10 +157,20 @@ class City extends Model {
      * This method completely removes a city from the database
      * instead of just marking it as deleted.
      * 
+     * WARNING: This should only be used when there are no leads associated with the city.
+     * 
      * @param int $id City ID
      * @return bool Success or failure
      */
     public function hardDelete($id) {
+        // First check if there are any leads associated with this city
+        $leadCount = $this->getLeadCount($id);
+        if ($leadCount > 0) {
+            // Cannot hard delete a city with associated leads
+            return false;
+        }
+        
+        // Safe to delete
         $sql = "DELETE FROM {$this->table} WHERE id = ?";
         $this->db->query($sql, [$id]);
         return true;

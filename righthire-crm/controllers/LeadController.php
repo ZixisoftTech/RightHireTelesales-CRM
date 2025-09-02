@@ -654,7 +654,7 @@ class LeadController {
                     'phone' => $row[$phoneIndex],
                     'address' => $addressIndex !== false ? $row[$addressIndex] : null,
                     'state_id' => $stateId,
-                    'city_id' => $cityId ?? null, // Ensure city_id is null if not found
+                    'city_id' => $cityId, // Will be handled in the Lead model if null
                     'status' => 'new', // Default status for imported leads
                     'assigned_to' => $assignedTo,
                     'created_by' => $_SESSION['user_id'],

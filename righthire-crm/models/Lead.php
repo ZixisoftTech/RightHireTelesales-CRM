@@ -31,7 +31,7 @@ class Lead extends Model {
             // In a real-world scenario, we might want to create a "Default" or "Unknown" city for each state
             
             // For now, we'll try to find the first active city in the state
-            $sql = "SELECT id FROM cities WHERE state_id = ? AND status = 1 AND deleted_at IS NULL ORDER BY id ASC LIMIT 1";
+            $sql = "SELECT id FROM cities WHERE state_id = ? AND status = 1 ORDER BY id ASC LIMIT 1";
             $defaultCityId = $this->db->getValue($sql, [$data['state_id']]);
             
             if ($defaultCityId) {
@@ -111,7 +111,7 @@ class Lead extends Model {
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.deleted_at IS NULL";
+                WHERE 1=1";
         
         // Apply filters
         if (!empty($filters['state_id'])) {
@@ -240,7 +240,6 @@ class Lead extends Model {
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.deleted_at IS NULL
                 ORDER BY l.id DESC
                 LIMIT ?, ?";
         
@@ -248,14 +247,9 @@ class Lead extends Model {
     }
     
     /**
-     * Delete a lead (soft delete)
-     * 
-     * @param int $id Lead ID
-     * @return bool Success or failure
+     * This method is now implemented at the end of the file
+     * @see deleteLead() at the end of this file
      */
-    public function deleteLead($id) {
-        return $this->delete($id);
-    }
     
     /**
      * Get lead by ID with related data
@@ -266,7 +260,7 @@ class Lead extends Model {
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.id = ? AND l.deleted_at IS NULL";
+                WHERE l.id = ?";
         
         return $this->db->getRow($sql, [$id]);
     }
@@ -293,7 +287,7 @@ class Lead extends Model {
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.deleted_at IS NULL";
+                WHERE 1=1";
         
         // Apply filters
         if ($stateId > 0) {
@@ -794,7 +788,7 @@ class Lead extends Model {
                 FROM call_logs cl
                 LEFT JOIN leads l ON cl.lead_id = l.id
                 LEFT JOIN users u ON cl.created_by = u.id
-                WHERE cl.deleted_at IS NULL";
+                WHERE 1=1";
         
         $params = [];
         
@@ -845,8 +839,8 @@ class Lead extends Model {
                         (SUM(CASE WHEN l.status = 'win' THEN 1 ELSE 0 END) / COUNT(DISTINCT l.id)) * 100 
                     ELSE 0 END, 2) as conversion_rate
                 FROM users u
-                LEFT JOIN leads l ON u.id = l.assigned_to AND l.deleted_at IS NULL
-                LEFT JOIN call_logs cl ON l.id = cl.lead_id AND cl.deleted_at IS NULL
+                LEFT JOIN leads l ON u.id = l.assigned_to
+                LEFT JOIN call_logs cl ON l.id = cl.lead_id
                 WHERE u.role = 'employee' AND u.deleted_at IS NULL";
         
         $params = [];
@@ -885,7 +879,7 @@ class Lead extends Model {
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
-                WHERE l.deleted_at IS NULL AND l.assigned_to = ?
+                WHERE l.assigned_to = ?
                 ORDER BY l.id DESC";
         
         return $this->db->getRows($sql, [$employeeId]);
@@ -899,7 +893,7 @@ class Lead extends Model {
                 FROM {$this->table} l
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.deleted_at IS NULL AND l.state_id = ?
+                WHERE l.state_id = ?
                 ORDER BY l.id DESC";
         
         return $this->db->getRows($sql, [$stateId]);
@@ -913,7 +907,7 @@ class Lead extends Model {
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.deleted_at IS NULL AND l.city_id = ?
+                WHERE l.city_id = ?
                 ORDER BY l.id DESC";
         
         return $this->db->getRows($sql, [$cityId]);
@@ -928,7 +922,7 @@ class Lead extends Model {
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
-                WHERE l.deleted_at IS NULL AND l.status = ?
+                WHERE l.status = ?
                 ORDER BY l.id DESC";
         
         return $this->db->getRows($sql, [$status]);
@@ -1055,13 +1049,13 @@ class Lead extends Model {
                     }
                     
                     // Get state ID
-                    $stateId = $this->db->getValue("SELECT id FROM states WHERE name = ? AND deleted_at IS NULL", [$stateName]);
+                    $stateId = $this->db->getValue("SELECT id FROM states WHERE name = ?", [$stateName]);
                     if (!$stateId) {
                         throw new Exception("State not found: $stateName");
                     }
                     
                     // Get city ID
-                    $cityId = $this->db->getValue("SELECT id FROM cities WHERE name = ? AND state_id = ? AND deleted_at IS NULL", [$cityName, $stateId]);
+                    $cityId = $this->db->getValue("SELECT id FROM cities WHERE name = ? AND state_id = ?", [$cityName, $stateId]);
                     if (!$cityId) {
                         throw new Exception("City not found: $cityName in state $stateName");
                     }
@@ -1125,5 +1119,38 @@ class Lead extends Model {
      */
     public function updateLead($id, $data) {
         return $this->update($id, $data);
+    }
+    
+    /**
+     * Delete a lead and its associated call logs
+     * 
+     * @param int $id Lead ID
+     * @return bool Success or failure
+     */
+    public function deleteLead($id) {
+        // Begin transaction for data integrity
+        $this->db->beginTransaction();
+        
+        try {
+            // Get lead data for audit purposes
+            $lead = $this->find($id);
+            
+            if (!$lead) {
+                return false; // Lead not found
+            }
+            
+            // Delete all call logs associated with this lead first
+            $this->db->query("DELETE FROM call_logs WHERE lead_id = ?", [$id]);
+            
+            // Now delete the lead
+            $result = $this->delete($id);
+            
+            $this->db->commit();
+            return $result;
+        } catch (Exception $e) {
+            $this->db->rollback();
+            error_log("Error deleting lead: " . $e->getMessage());
+            return false;
+        }
     }
 }

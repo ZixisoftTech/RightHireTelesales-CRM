@@ -25,7 +25,7 @@ class Model {
      * Find a record by ID
      */
     public function find($id) {
-        $sql = "SELECT * FROM {$this->table} WHERE {$this->primaryKey} = ? AND deleted_at IS NULL";
+        $sql = "SELECT * FROM {$this->table} WHERE {$this->primaryKey} = ?";
         return $this->db->getRow($sql, [$id]);
     }
     
@@ -34,7 +34,7 @@ class Model {
      */
     public function getAll($page = 1, $limit = RECORDS_PER_PAGE) {
         $offset = ($page - 1) * $limit;
-        $sql = "SELECT * FROM {$this->table} WHERE deleted_at IS NULL ORDER BY {$this->primaryKey} DESC LIMIT ?, ?";
+        $sql = "SELECT * FROM {$this->table} ORDER BY {$this->primaryKey} DESC LIMIT ?, ?";
         return $this->db->getRows($sql, [$offset, $limit]);
     }
     
@@ -42,7 +42,7 @@ class Model {
      * Get all active records
      */
     public function getAllActive() {
-        $sql = "SELECT * FROM {$this->table} WHERE status = 1 AND deleted_at IS NULL ORDER BY name ASC";
+        $sql = "SELECT * FROM {$this->table} WHERE status = 1 ORDER BY name ASC";
         return $this->db->getRows($sql);
     }
     
@@ -50,7 +50,7 @@ class Model {
      * Count all records
      */
     public function count() {
-        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE deleted_at IS NULL";
+        $sql = "SELECT COUNT(*) FROM {$this->table}";
         return $this->db->getValue($sql);
     }
     
@@ -113,10 +113,10 @@ class Model {
     }
     
     /**
-     * Delete a record (soft delete)
+     * Delete a record (hard delete)
      */
     public function delete($id) {
-        return $this->softDelete($id);
+        return $this->hardDelete($id);
     }
     
     /**
@@ -164,16 +164,33 @@ class Model {
         // Get old values for audit
         $oldValues = $this->find($id);
         
-        // Hard delete
-        $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = ?";
-        $result = $this->db->query($sql, [$id]);
-        
-        // Log audit
-        if ($this->auditEnabled && $oldValues) {
-            $this->logAudit('hard_delete', $id, $oldValues, null);
+        if (!$oldValues) {
+            return false; // Record not found
         }
         
-        return true;
+        // Store complete record data for audit
+        $completeRecordData = $oldValues;
+        
+        // Begin transaction for data integrity
+        $this->db->beginTransaction();
+        
+        try {
+            // Hard delete
+            $sql = "DELETE FROM {$this->table} WHERE {$this->primaryKey} = ?";
+            $result = $this->db->query($sql, [$id]);
+            
+            // Log audit with complete record data
+            if ($this->auditEnabled) {
+                $this->logAudit('hard_delete', $id, $completeRecordData, null);
+            }
+            
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollback();
+            error_log("Error during hard delete: " . $e->getMessage());
+            return false;
+        }
     }
     
     /**

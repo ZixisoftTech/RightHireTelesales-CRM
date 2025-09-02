@@ -33,10 +33,10 @@ require_once __DIR__ . '/../../views/templates/header.php';
                     </div>
                     
                     <div class="d-flex justify-content-between">
-                        <a href="<?= BASE_URL ?>states" class="btn btn-secondary">
+                        <a href="<?= APP_URL ?>/states" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Cancel
                         </a>
-                        <a href="<?= BASE_URL ?>states/delete?id=<?= $state['id'] ?>&confirm=1" class="btn btn-danger">
+                        <a href="<?= APP_URL ?>/states/delete?id=<?= $state['id'] ?>&confirm=1" class="btn btn-danger">
                             <i class="fas fa-trash"></i> Yes, Delete State and All Associated Data
                         </a>
                     </div>

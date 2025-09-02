@@ -56,7 +56,7 @@ class LeadController {
         
         // Get leads
         $leads = $this->leadModel->getLeads($filters, true, $page, $perPage);
-        $totalLeads = $this->leadModel->getTotalLeads($filters);
+        $totalLeads = $this->leadModel->countLeads($filters);
         
         // Calculate pagination
         $totalPages = ceil($totalLeads / $perPage);
@@ -615,7 +615,7 @@ class LeadController {
                     'phone' => $row[$phoneIndex],
                     'address' => $addressIndex !== false ? $row[$addressIndex] : null,
                     'state_id' => $stateId,
-                    'city_id' => $cityId,
+                    'city_id' => $cityId ?? null, // Ensure city_id is null if not found
                     'status' => 'new', // Default status for imported leads
                     'assigned_to' => $assignedTo,
                     'created_by' => $_SESSION['user_id'],
@@ -745,4 +745,3 @@ class LeadController {
         exit;
     }
 }
-

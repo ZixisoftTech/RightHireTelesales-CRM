@@ -44,6 +44,7 @@ $routes = [
     'leads/update-status' => ['controller' => 'LeadController', 'action' => 'updateStatus'],
     'leads/import' => ['controller' => 'LeadController', 'action' => 'import'],
     'leads/export' => ['controller' => 'LeadController', 'action' => 'export'],
+    'leads/downloadSample' => ['controller' => 'LeadController', 'action' => 'downloadSample'],
     
     // User routes
     'users' => ['controller' => 'UserController', 'action' => 'index'],
@@ -88,4 +89,3 @@ if (isset($routes[$route])) {
     echo '404 - Page not found';
     exit;
 }
-

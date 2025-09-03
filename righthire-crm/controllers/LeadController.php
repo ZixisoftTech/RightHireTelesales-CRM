@@ -27,6 +27,7 @@ class LeadController {
         $this->cityModel = new City();
         $this->userModel = new User();
         $this->callLogModel = new CallLog();
+        $this->db = Database::getInstance();
     }
     
     /**
@@ -720,6 +721,75 @@ class LeadController {
     /**
      * Export leads to CSV
      */
+    /**
+     * Download sample import file
+     */
+    public function downloadSample() {
+        // Check if user is logged in
+        if (!isLoggedIn()) {
+            redirect('auth/login');
+            exit;
+        }
+        
+        // Set headers for Excel download
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="leads_import_sample.xlsx"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
+        // Start HTML output for Excel
+        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+        echo '<head>';
+        echo '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">';
+        echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Sample</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+        echo '</head>';
+        echo '<body>';
+        echo '<table border="1">';
+        
+        // Add header row
+        echo '<tr style="font-weight: bold; background-color: #f0f0f0;">';
+        echo '<td>name</td>';
+        echo '<td>email</td>';
+        echo '<td>phone</td>';
+        echo '<td>address</td>';
+        echo '<td>city</td>';
+        echo '</tr>';
+        
+        // Add sample data rows
+        echo '<tr>';
+        echo '<td>John Doe</td>';
+        echo '<td>john.doe@example.com</td>';
+        echo '<td>1234567890</td>';
+        echo '<td>123 Main St</td>';
+        echo '<td>New York</td>';
+        echo '</tr>';
+        
+        echo '<tr>';
+        echo '<td>Jane Smith</td>';
+        echo '<td>jane.smith@example.com</td>';
+        echo '<td>9876543210</td>';
+        echo '<td>456 Oak Ave</td>';
+        echo '<td>Los Angeles</td>';
+        echo '</tr>';
+        
+        echo '<tr>';
+        echo '<td>Michael Johnson</td>';
+        echo '<td>michael.j@example.com</td>';
+        echo '<td>5551234567</td>';
+        echo '<td>789 Pine Rd</td>';
+        echo '<td>Chicago</td>';
+        echo '</tr>';
+        
+        echo '</table>';
+        echo '</body>';
+        echo '</html>';
+        
+        exit;
+    }
+    
+    /**
+     * Export leads
+     */
     public function export() {
         // Check if user is logged in
         if (!isLoggedIn()) {
@@ -747,60 +817,126 @@ class LeadController {
             exit;
         }
         
-        // Set headers for CSV download
-        header('Content-Type: text/csv; charset=UTF-8');
-        header('Content-Disposition: attachment; filename="leads_export_' . date('Y-m-d') . '.csv"');
-        header('Pragma: no-cache');
-        header('Expires: 0');
+        // Determine export format (Excel or CSV)
+        $format = isset($_GET['format']) ? strtolower($_GET['format']) : 'excel';
         
-        // Create output stream
-        $output = fopen('php://output', 'w');
-        
-        // Add UTF-8 BOM
-        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
-        
-        // Add header row
-        fputcsv($output, [
-            'ID',
-            'Name',
-            'Email',
-            'Phone',
-            'Address',
-            'State',
-            'City',
-            'Status',
-            'Region',
-            'Follow-up Date',
-            'Remarks',
-            'Assigned To',
-            'Created At',
-            'Updated At'
-        ]);
-        
-        // Add data rows
-        foreach ($leads as $lead) {
-            // Format status for better readability
-            $status = ucfirst(str_replace('_', ' ', $lead['status']));
+        if ($format === 'excel') {
+            // Set headers for Excel download
+            header('Content-Type: application/vnd.ms-excel');
+            header('Content-Disposition: attachment; filename="leads_export_' . date('Y-m-d') . '.xls"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
             
+            // Start HTML output for Excel
+            echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+            echo '<head>';
+            echo '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">';
+            echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Leads</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+            echo '</head>';
+            echo '<body>';
+            echo '<table border="1">';
+            
+            // Add header row
+            echo '<tr style="font-weight: bold; background-color: #f0f0f0;">';
+            echo '<td>ID</td>';
+            echo '<td>Name</td>';
+            echo '<td>Email</td>';
+            echo '<td>Phone</td>';
+            echo '<td>Address</td>';
+            echo '<td>State</td>';
+            echo '<td>City</td>';
+            echo '<td>Status</td>';
+            echo '<td>Region</td>';
+            echo '<td>Follow-up Date</td>';
+            echo '<td>Remarks</td>';
+            echo '<td>Assigned To</td>';
+            echo '<td>Created At</td>';
+            echo '<td>Updated At</td>';
+            echo '</tr>';
+            
+            // Add data rows
+            foreach ($leads as $lead) {
+                // Format status for better readability
+                $status = ucfirst(str_replace('_', ' ', $lead['status']));
+                
+                echo '<tr>';
+                echo '<td>' . htmlspecialchars($lead['id']) . '</td>';
+                echo '<td>' . htmlspecialchars($lead['name']) . '</td>';
+                echo '<td>' . htmlspecialchars($lead['email'] ?? '') . '</td>';
+                echo '<td>' . htmlspecialchars($lead['phone']) . '</td>';
+                echo '<td>' . htmlspecialchars($lead['address'] ?? '') . '</td>';
+                echo '<td>' . htmlspecialchars($lead['state_name'] ?? '') . '</td>';
+                echo '<td>' . htmlspecialchars($lead['city_name'] ?? '') . '</td>';
+                echo '<td>' . htmlspecialchars($status) . '</td>';
+                echo '<td>' . htmlspecialchars($lead['region'] ?? '') . '</td>';
+                echo '<td>' . htmlspecialchars($lead['follow_up_date'] ?? '') . '</td>';
+                echo '<td>' . htmlspecialchars($lead['remarks'] ?? '') . '</td>';
+                echo '<td>' . htmlspecialchars($lead['assigned_to_name'] ?? '') . '</td>';
+                echo '<td>' . htmlspecialchars($lead['created_at']) . '</td>';
+                echo '<td>' . htmlspecialchars($lead['updated_at'] ?? '') . '</td>';
+                echo '</tr>';
+            }
+            
+            echo '</table>';
+            echo '</body>';
+            echo '</html>';
+        } else {
+            // Set headers for CSV download
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="leads_export_' . date('Y-m-d') . '.csv"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            
+            // Create output stream
+            $output = fopen('php://output', 'w');
+            
+            // Add UTF-8 BOM
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Add header row
             fputcsv($output, [
-                $lead['id'],
-                $lead['name'],
-                $lead['email'],
-                $lead['phone'],
-                $lead['address'],
-                $lead['state_name'],
-                $lead['city_name'],
-                $status,
-                $lead['region'] ?? '',
-                $lead['follow_up_date'] ?? '',
-                $lead['remarks'] ?? '',
-                $lead['assigned_to_name'],
-                $lead['created_at'],
-                $lead['updated_at']
+                'ID',
+                'Name',
+                'Email',
+                'Phone',
+                'Address',
+                'State',
+                'City',
+                'Status',
+                'Region',
+                'Follow-up Date',
+                'Remarks',
+                'Assigned To',
+                'Created At',
+                'Updated At'
             ]);
+            
+            // Add data rows
+            foreach ($leads as $lead) {
+                // Format status for better readability
+                $status = ucfirst(str_replace('_', ' ', $lead['status']));
+                
+                fputcsv($output, [
+                    $lead['id'],
+                    $lead['name'],
+                    $lead['email'] ?? '',
+                    $lead['phone'],
+                    $lead['address'] ?? '',
+                    $lead['state_name'] ?? '',
+                    $lead['city_name'] ?? '',
+                    $status,
+                    $lead['region'] ?? '',
+                    $lead['follow_up_date'] ?? '',
+                    $lead['remarks'] ?? '',
+                    $lead['assigned_to_name'] ?? '',
+                    $lead['created_at'],
+                    $lead['updated_at'] ?? ''
+                ]);
+            }
+            
+            fclose($output);
         }
         
-        fclose($output);
         exit;
     }
 }

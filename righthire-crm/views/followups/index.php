@@ -105,37 +105,39 @@
             <table class="table table-striped table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Lead Name</th>
+                        <th>Follow-Up Time</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>State</th>
+                        <th>City</th>
                         <th>Status</th>
-                        <th>Last Follow-up</th>
-                        <th>Follow-up Date & Time</th>
-                        <?php if (hasRole('administrator')): ?>
-                            <th>Assigned To</th>
-                        <?php endif; ?>
+                        <th>Assigned To</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($followUps)): ?>
                         <tr>
-                            <td colspan="<?php echo hasRole('administrator') ? '6' : '5'; ?>" class="text-center py-4">
+                            <td colspan="9" class="text-center py-4">
                                 <p class="text-muted mb-0">No follow-ups found</p>
                             </td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($followUps as $followUp): ?>
                             <tr>
+                                <td><?php echo formatDateTime($followUp['follow_up_date']); ?></td>
                                 <td>
                                     <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>">
                                         <?php echo htmlspecialchars($followUp['name']); ?>
                                     </a>
                                 </td>
+                                <td><?php echo htmlspecialchars($followUp['phone']); ?></td>
+                                <td><?php echo htmlspecialchars($followUp['email']); ?></td>
+                                <td><?php echo htmlspecialchars($followUp['state_name']); ?></td>
+                                <td><?php echo htmlspecialchars($followUp['city_name']); ?></td>
                                 <td><?php echo getStatusBadge($followUp['status']); ?></td>
-                                <td><?php echo !empty($followUp['last_follow_up']) ? formatDateTime($followUp['last_follow_up']) : '-'; ?></td>
-                                <td><?php echo formatDateTime($followUp['follow_up_date']); ?></td>
-                                <?php if (hasRole('administrator')): ?>
-                                    <td><?php echo htmlspecialchars($followUp['assigned_to_name']); ?></td>
-                                <?php endif; ?>
+                                <td><?php echo htmlspecialchars($followUp['assigned_to_name'] ?? 'Not Assigned'); ?></td>
                                 <td>
                                     <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-info" title="View Lead">
                                         <i class="fas fa-eye"></i>

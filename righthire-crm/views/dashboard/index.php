@@ -61,18 +61,18 @@
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-dashboard card-interested h-100">
+        <div class="card card-dashboard card-in-dealing h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title text-muted mb-0">Interested</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['interested']; ?></h2>
+                        <h6 class="card-title text-muted mb-0">In Dealing</h6>
+                        <h2 class="mt-2 mb-0"><?php echo $stats['in_dealing']; ?></h2>
                         <div class="small text-success mt-1">
                             <i class="fas fa-arrow-up"></i> 5.27% since last week
                         </div>
                     </div>
                     <div class="bg-info bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-thumbs-up text-info fa-2x"></i>
+                        <i class="fas fa-handshake text-info fa-2x"></i>
                     </div>
                 </div>
             </div>
@@ -84,14 +84,36 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="card-title text-muted mb-0">Wins</h6>
+                        <h6 class="card-title text-muted mb-0">Won</h6>
                         <h2 class="mt-2 mb-0"><?php echo $stats['wins']; ?></h2>
                         <div class="small text-success mt-1">
-                            <i class="fas fa-arrow-up"></i> 1.64% since last week
+                            <i class="fas fa-calendar-alt"></i> <?php echo $stats['monthly_wins']; ?> this month
                         </div>
                     </div>
                     <div class="bg-success bg-opacity-10 p-3 rounded">
                         <i class="fas fa-trophy text-success fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Lost Leads Card -->
+<div class="row mt-4">
+    <div class="col-xl-6 col-md-6 mb-4">
+        <div class="card card-dashboard card-lost h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-0">Lost Leads</h6>
+                        <h2 class="mt-2 mb-0"><?php echo $stats['lost']; ?></h2>
+                        <div class="small text-danger mt-1">
+                            <i class="fas fa-calendar-alt"></i> <?php echo $stats['monthly_lost']; ?> this month
+                        </div>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 p-3 rounded">
+                        <i class="fas fa-times-circle text-danger fa-2x"></i>
                     </div>
                 </div>
             </div>

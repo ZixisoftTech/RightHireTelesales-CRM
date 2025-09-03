@@ -20,6 +20,7 @@ define('LEAD_STATUSES', [
     'new' => 'New',
     'follow_up' => 'Follow Up',
     'interested' => 'Interested',
+    'in_dealing' => 'In Dealing',
     'not_interested' => 'Not Interested',
     'not_attend' => 'Not Attend',
     'wrong_number' => 'Wrong Number',

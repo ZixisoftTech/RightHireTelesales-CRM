@@ -219,8 +219,16 @@ a {
     border-left-color: var(--info);
 }
 
+.card-in-dealing {
+    border-left-color: var(--info);
+}
+
 .card-win {
     border-left-color: var(--success);
+}
+
+.card-lost {
+    border-left-color: var(--danger);
 }
 
 .card-dead {
@@ -506,4 +514,3 @@ a {
 canvas {
     max-width: 100%;
 }
-

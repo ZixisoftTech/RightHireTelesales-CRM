@@ -142,6 +142,65 @@
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            
+            <?php if (empty($leads) && !hasRole('administrator')): ?>
+            <div class="alert alert-info mt-3">
+                <strong>Debug Info:</strong> You are logged in as an employee. 
+                <?php
+                $userId = getCurrentUserId();
+                // Ensure database is initialized
+                if (!isset($GLOBALS['db'])) {
+                    require_once 'models/Database.php';
+                    $GLOBALS['db'] = Database::getInstance();
+                }
+                $territories = $GLOBALS['db']->getRows(
+                    "SELECT et.id, s.name as state, c.name as city 
+                    FROM employee_territories et
+                    LEFT JOIN states s ON et.state_id = s.id
+                    LEFT JOIN cities c ON et.city_id = c.id
+                    WHERE et.user_id = ? AND et.deleted_at IS NULL", 
+                    [$userId]
+                );
+                
+                if (empty($territories)) {
+                    echo "You have no territories assigned. Please contact an administrator.";
+                } else {
+                    echo "Your assigned territories: <ul>";
+                    foreach ($territories as $t) {
+                        echo "<li>" . htmlspecialchars($t['state']) . 
+                             (isset($t['city']) ? " / " . htmlspecialchars($t['city']) : "") . "</li>";
+                    }
+                    echo "</ul>";
+                    
+                    // Check if there are any leads in these territories
+                    $territoryLeads = 0;
+                    foreach ($territories as $t) {
+                        $stateId = $GLOBALS['db']->getValue(
+                            "SELECT id FROM states WHERE name = ?", 
+                            [$t['state']]
+                        );
+                        $cityId = isset($t['city']) ? $GLOBALS['db']->getValue(
+                            "SELECT id FROM cities WHERE name = ?", 
+                            [$t['city']]
+                        ) : null;
+                        
+                        if ($stateId) {
+                            $count = $GLOBALS['db']->getValue(
+                                "SELECT COUNT(*) FROM leads 
+                                WHERE state_id = ? " . 
+                                ($cityId ? "AND city_id = ? " : "") . 
+                                "AND deleted_at IS NULL", 
+                                $cityId ? [$stateId, $cityId] : [$stateId]
+                            );
+                            $territoryLeads += $count;
+                        }
+                    }
+                    
+                    echo "<p>Total leads in your territories: " . $territoryLeads . "</p>";
+                }
+                ?>
+            </div>
+            <?php endif; ?>
         </div>
         
         <?php if ($totalPages > 1): ?>

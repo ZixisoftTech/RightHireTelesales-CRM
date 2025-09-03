@@ -916,6 +916,21 @@ class Lead extends Model {
      * Get leads for employee (including territory-based leads)
      */
     public function getLeadsForEmployee($employeeId) {
+        // First, log the territories assigned to this employee for debugging
+        $territorySql = "SELECT et.id, et.state_id, s.name as state_name, et.city_id, c.name as city_name
+                        FROM employee_territories et
+                        LEFT JOIN states s ON et.state_id = s.id
+                        LEFT JOIN cities c ON et.city_id = c.id
+                        WHERE et.user_id = ? AND et.deleted_at IS NULL";
+        
+        $territories = $this->db->getRows($territorySql, [$employeeId]);
+        
+        // Log territories to a file for debugging
+        $logFile = 'logs/territory_debug.log';
+        $logData = date('Y-m-d H:i:s') . " - Employee ID: $employeeId - Territories: " . print_r($territories, true) . "\n";
+        file_put_contents($logFile, $logData, FILE_APPEND);
+        
+        // Get leads for this employee (assigned directly or via territory)
         $sql = "SELECT l.*, s.name as state_name, c.name as city_name
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
@@ -934,7 +949,14 @@ class Lead extends Model {
                 )
                 ORDER BY l.id DESC";
         
-        return $this->db->getRows($sql, [$employeeId, $employeeId]);
+        $leads = $this->db->getRows($sql, [$employeeId, $employeeId]);
+        
+        // Log leads to the file for debugging
+        $logData = date('Y-m-d H:i:s') . " - Employee ID: $employeeId - Leads found: " . count($leads) . "\n";
+        $logData .= print_r($leads, true) . "\n";
+        file_put_contents($logFile, $logData, FILE_APPEND);
+        
+        return $leads;
     }
     
     /**
@@ -963,6 +985,37 @@ class Lead extends Model {
                 ORDER BY l.id DESC";
         
         return $this->db->getRows($sql, [$cityId]);
+    }
+    
+    /**
+     * Create a test lead for a specific state/city if none exists
+     * This is used for debugging territory-based lead visibility
+     */
+    public function createTestLeadIfNoneExists($stateId, $cityId, $createdBy) {
+        // Check if any leads exist for this state/city
+        $checkSql = "SELECT COUNT(*) FROM {$this->table} 
+                    WHERE state_id = ? AND city_id = ? AND deleted_at IS NULL";
+        $count = $this->db->getValue($checkSql, [$stateId, $cityId]);
+        
+        // If no leads exist, create a test lead
+        if ($count == 0) {
+            $testData = [
+                'name' => 'Test Lead for Territory',
+                'email' => 'test.territory@example.com',
+                'phone' => '9876543210',
+                'address' => 'Test Address',
+                'state_id' => $stateId,
+                'city_id' => $cityId,
+                'status' => 'new',
+                'remarks' => 'This is a test lead created for territory testing',
+                'created_by' => $createdBy,
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            
+            return $this->createLead($testData);
+        }
+        
+        return false;
     }
     
     /**

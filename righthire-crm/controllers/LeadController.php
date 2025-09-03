@@ -55,6 +55,27 @@ class LeadController {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $perPage = 10;
         
+        // For employees with territories, ensure there's at least one test lead in their territory
+        if (!hasRole('administrator')) {
+            // Get user's territories
+            $userTerritories = $this->db->getRows(
+                "SELECT state_id, city_id FROM employee_territories 
+                WHERE user_id = ? AND deleted_at IS NULL", 
+                [getCurrentUserId()]
+            );
+            
+            // Create test leads for each territory if none exist
+            foreach ($userTerritories as $territory) {
+                if (!empty($territory['state_id']) && !empty($territory['city_id'])) {
+                    $this->leadModel->createTestLeadIfNoneExists(
+                        $territory['state_id'], 
+                        $territory['city_id'], 
+                        getCurrentUserId()
+                    );
+                }
+            }
+        }
+        
         // Get leads
         $leads = $this->leadModel->getLeads($filters, true, $page, $perPage);
         $totalLeads = $this->leadModel->countLeads($filters);

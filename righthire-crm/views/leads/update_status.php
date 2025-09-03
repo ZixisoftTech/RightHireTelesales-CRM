@@ -57,12 +57,11 @@
                         <label for="status" class="form-label required">Status</label>
                         <select class="form-select" id="status" name="status" required>
                             <option value="">Select Status</option>
-                            <option value="new" <?php echo isset($_POST['status']) && $_POST['status'] === 'new' ? 'selected' : ''; ?>>New</option>
-                            <option value="not_attend" <?php echo isset($_POST['status']) && $_POST['status'] === 'not_attend' ? 'selected' : ''; ?>>Not Attend</option>
-                            <option value="wrong_number" <?php echo isset($_POST['status']) && $_POST['status'] === 'wrong_number' ? 'selected' : ''; ?>>Wrong Number</option>
-                            <option value="interested" <?php echo isset($_POST['status']) && $_POST['status'] === 'interested' ? 'selected' : ''; ?>>Interested</option>
-                            <option value="won" <?php echo isset($_POST['status']) && $_POST['status'] === 'won' ? 'selected' : ''; ?>>Won</option>
-                            <option value="lost" <?php echo isset($_POST['status']) && $_POST['status'] === 'lost' ? 'selected' : ''; ?>>Lost</option>
+                            <?php foreach (LEAD_STATUSES as $statusKey => $statusLabel): ?>
+                                <option value="<?php echo $statusKey; ?>" <?php echo isset($_POST['status']) && $_POST['status'] === $statusKey ? 'selected' : ''; ?>>
+                                    <?php echo $statusLabel; ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div id="region-group" class="mb-3 d-none">

@@ -28,12 +28,11 @@
                     <label for="status" class="form-label">Status</label>
                     <select class="form-select" id="status" name="status">
                         <option value="">All Statuses</option>
-                        <option value="new" <?php echo isset($filters['status']) && $filters['status'] === 'new' ? 'selected' : ''; ?>>New</option>
-                        <option value="not_attend" <?php echo isset($filters['status']) && $filters['status'] === 'not_attend' ? 'selected' : ''; ?>>Not Attend</option>
-                        <option value="wrong_number" <?php echo isset($filters['status']) && $filters['status'] === 'wrong_number' ? 'selected' : ''; ?>>Wrong Number</option>
-                        <option value="interested" <?php echo isset($filters['status']) && $filters['status'] === 'interested' ? 'selected' : ''; ?>>Interested</option>
-                        <option value="won" <?php echo isset($filters['status']) && $filters['status'] === 'won' ? 'selected' : ''; ?>>Won</option>
-                        <option value="lost" <?php echo isset($filters['status']) && $filters['status'] === 'lost' ? 'selected' : ''; ?>>Lost</option>
+                        <?php foreach (LEAD_STATUSES as $statusKey => $statusLabel): ?>
+                            <option value="<?php echo $statusKey; ?>" <?php echo isset($filters['status']) && $filters['status'] === $statusKey ? 'selected' : ''; ?>>
+                                <?php echo $statusLabel; ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">

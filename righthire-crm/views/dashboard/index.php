@@ -23,133 +23,93 @@
 <!-- Status Cards -->
 <div class="row">
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-dashboard card-new h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-muted mb-0">New Leads</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['new_leads']; ?></h2>
-                        <div class="small text-success mt-1">
-                            <i class="fas fa-arrow-up"></i> 3.48% since last week
+        <a href="<?php echo APP_URL; ?>/leads?status=new" class="text-decoration-none">
+            <div class="card card-dashboard card-new h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-0">New Leads</h6>
+                            <h2 class="mt-2 mb-0"><?php echo $stats['new_leads']; ?></h2>
+                            <div class="small text-success mt-1">
+                                <i class="fas fa-arrow-up"></i> <?php echo date('M d'); ?> stats
+                            </div>
                         </div>
-                    </div>
-                    <div class="bg-primary bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-user-plus text-primary fa-2x"></i>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-user-plus text-primary fa-2x"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-dashboard card-follow-up h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-muted mb-0">Follow-ups</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['follow_ups']; ?></h2>
-                        <div class="small text-success mt-1">
-                            <i class="fas fa-arrow-up"></i> 2.15% since last week
+        <a href="<?php echo APP_URL; ?>/followups" class="text-decoration-none">
+            <div class="card card-dashboard card-follow-up h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-0">Followups</h6>
+                            <h2 class="mt-2 mb-0"><?php echo count($todayFollowUps) + count($missedFollowUps); ?></h2>
+                            <div class="small text-success mt-1">
+                                <i class="fas fa-calendar-alt"></i> Pending follow-ups
+                            </div>
                         </div>
-                    </div>
-                    <div class="bg-warning bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-calendar-alt text-warning fa-2x"></i>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-calendar-alt text-warning fa-2x"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-dashboard card-in-dealing h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-muted mb-0">In Dealing</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['in_dealing']; ?></h2>
-                        <div class="small text-success mt-1">
-                            <i class="fas fa-arrow-up"></i> 5.27% since last week
+        <a href="<?php echo APP_URL; ?>/leads?status=in_dealing" class="text-decoration-none">
+            <div class="card card-dashboard card-in-dealing h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-0">In Dealing</h6>
+                            <h2 class="mt-2 mb-0"><?php echo $stats['in_dealing']; ?></h2>
+                            <div class="small text-success mt-1">
+                                <i class="fas fa-handshake"></i> Active negotiations
+                            </div>
                         </div>
-                    </div>
-                    <div class="bg-info bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-handshake text-info fa-2x"></i>
+                        <div class="bg-info bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-handshake text-info fa-2x"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-dashboard card-win h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-muted mb-0">Won</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['wins']; ?></h2>
-                        <div class="small text-success mt-1">
-                            <i class="fas fa-calendar-alt"></i> <?php echo $stats['monthly_wins']; ?> this month
+        <a href="<?php echo APP_URL; ?>/leads?status=win" class="text-decoration-none">
+            <div class="card card-dashboard card-win h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-0">Won</h6>
+                            <h2 class="mt-2 mb-0"><?php echo $stats['wins']; ?></h2>
+                            <div class="small text-success mt-1">
+                                <i class="fas fa-calendar-alt"></i> <?php echo $stats['monthly_wins']; ?> this month
+                            </div>
                         </div>
-                    </div>
-                    <div class="bg-success bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-trophy text-success fa-2x"></i>
+                        <div class="bg-success bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-trophy text-success fa-2x"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
-<!-- Monthly Lost Leads Card -->
-<div class="row mt-4">
-    <div class="col-xl-6 col-md-6 mb-4">
-        <div class="card card-dashboard card-lost h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-muted mb-0">Lost Leads</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['lost']; ?></h2>
-                        <div class="small text-danger mt-1">
-                            <i class="fas fa-calendar-alt"></i> <?php echo $stats['monthly_lost']; ?> this month
-                        </div>
-                    </div>
-                    <div class="bg-danger bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-times-circle text-danger fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Charts & Tables -->
+<!-- Today's Follow-ups -->
 <div class="row">
-    <!-- Lead Status Chart -->
-    <div class="col-lg-8 mb-4">
-        <div class="card h-100">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Lead Status Overview</h5>
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-link dropdown-toggle text-muted" type="button" id="chartDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="chartDropdown">
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i> Export</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i> Refresh</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="chart-container" style="position: relative; height:300px;">
-                    <canvas id="leadStatusChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Today's Follow-ups -->
-    <div class="col-lg-12 mb-4">
+    <div class="col-12 mb-4">
         <div class="card h-100">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Today's Follow-ups</h5>
@@ -198,17 +158,19 @@
                                         <?php endif; ?>
                                         <td>
                                             <span class="badge bg-warning">
-                                                <?php echo formatDateTime($followUp['follow_up_date']); ?>
+                                                <?php echo date('M d, h:i A', strtotime($followUp['follow_up_date'])); ?>
                                             </span>
                                         </td>
-                                        <td><?php echo htmlspecialchars($followUp['remarks']); ?></td>
+                                        <td><?php echo htmlspecialchars($followUp['last_remark'] ?? 'No remarks'); ?></td>
                                         <td>
-                                            <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-info" title="View Lead">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-success" title="Add Call Log">
-                                                <i class="fas fa-phone"></i>
-                                            </a>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-outline-primary" title="View Lead">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="<?php echo APP_URL; ?>/call-logs/add?lead_id=<?php echo $followUp['id']; ?>" class="btn btn-outline-success" title="Add Call Log">
+                                                    <i class="fas fa-phone-alt"></i>
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -226,9 +188,9 @@
     </div>
 </div>
 
+<!-- Missed Follow-ups -->
 <div class="row">
-    <!-- Missed Follow-ups -->
-    <div class="col-lg-12 mb-4">
+    <div class="col-12 mb-4">
         <div class="card h-100">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Missed Follow-ups</h5>
@@ -254,7 +216,7 @@
                                     <?php if (hasRole('administrator')): ?>
                                         <th>Assigned To</th>
                                     <?php endif; ?>
-                                    <th>Missed Follow-Up Date</th>
+                                    <th>Follow-Up Date & Time</th>
                                     <th>Last Remark</th>
                                     <th>Actions</th>
                                 </tr>
@@ -277,17 +239,19 @@
                                         <?php endif; ?>
                                         <td>
                                             <span class="badge bg-danger">
-                                                <?php echo formatDateTime($followUp['follow_up_date']); ?>
+                                                <?php echo date('M d, h:i A', strtotime($followUp['follow_up_date'])); ?>
                                             </span>
                                         </td>
-                                        <td><?php echo htmlspecialchars($followUp['last_remark']); ?></td>
+                                        <td><?php echo htmlspecialchars($followUp['last_remark'] ?? 'No remarks'); ?></td>
                                         <td>
-                                            <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-info" title="View Lead">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-success" title="Add Call Log">
-                                                <i class="fas fa-phone"></i>
-                                            </a>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-outline-primary" title="View Lead">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="<?php echo APP_URL; ?>/call-logs/add?lead_id=<?php echo $followUp['id']; ?>" class="btn btn-outline-success" title="Add Call Log">
+                                                    <i class="fas fa-phone-alt"></i>
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -303,20 +267,30 @@
             <?php endif; ?>
         </div>
     </div>
+</div>
 
-    <!-- Daily Call Activity -->
+<!-- Lead Status Overview and Recent Call Logs -->
+<div class="row">
+    <!-- Lead Status Chart -->
     <div class="col-lg-8 mb-4">
         <div class="card h-100">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">Daily Call Activity</h5>
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" data-period="week">Week</button>
-                    <button type="button" class="btn btn-outline-secondary" data-period="month">Month</button>
+                <h5 class="card-title mb-0">Lead Status Overview</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-link dropdown-toggle text-muted" type="button" id="chartDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="chartDropdown">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i> Export</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i> Refresh</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                    </ul>
                 </div>
             </div>
             <div class="card-body">
                 <div class="chart-container" style="position: relative; height:300px;">
-                    <canvas id="dailyCallChart"></canvas>
+                    <canvas id="leadStatusChart"></canvas>
                 </div>
             </div>
         </div>
@@ -368,9 +342,9 @@
     </div>
 </div>
 
-<?php if (hasRole('administrator') && !empty($employeeStats)): ?>
+<!-- Employee Performance -->
+<?php if (!empty($employeeStats)): ?>
 <div class="row">
-    <!-- Employee Performance -->
     <div class="col-12 mb-4">
         <div class="card">
             <div class="card-header bg-light">
@@ -428,37 +402,34 @@ document.addEventListener('DOMContentLoaded', function() {
     var leadStatusChart = new Chart(leadStatusCtx, {
         type: 'doughnut',
         data: {
-            labels: ['New', 'Follow-up', 'Not Attend', 'Wrong Number', 'Other', 'Dead', 'Interested', 'Win'],
+            labels: ['New', 'Not Attend', 'Wrong Number', 'Interested', 'In Dealing', 'Win', 'Lost'],
             datasets: [{
                 data: [
                     <?php echo $stats['new_leads']; ?>,
-                    <?php echo $stats['follow_ups']; ?>,
                     <?php echo $stats['not_attend']; ?>,
                     <?php echo $stats['wrong_number']; ?>,
-                    <?php echo $stats['other']; ?>,
-                    <?php echo $stats['dead']; ?>,
                     <?php echo $stats['interested']; ?>,
-                    <?php echo $stats['wins']; ?>
+                    <?php echo $stats['in_dealing']; ?>,
+                    <?php echo $stats['wins']; ?>,
+                    <?php echo $stats['lost']; ?>
                 ],
                 backgroundColor: [
-                    'rgba(78, 115, 223, 0.8)',
-                    'rgba(246, 194, 62, 0.8)',
-                    'rgba(108, 117, 125, 0.8)',
-                    'rgba(231, 74, 59, 0.8)',
-                    'rgba(108, 117, 125, 0.8)',
-                    'rgba(231, 74, 59, 0.8)',
-                    'rgba(54, 185, 204, 0.8)',
-                    'rgba(28, 200, 138, 0.8)'
+                    'rgba(78, 115, 223, 0.8)',  // New
+                    'rgba(108, 117, 125, 0.8)', // Not Attend
+                    'rgba(231, 74, 59, 0.8)',   // Wrong Number
+                    'rgba(54, 185, 204, 0.8)',  // Interested
+                    'rgba(246, 194, 62, 0.8)',  // In Dealing
+                    'rgba(28, 200, 138, 0.8)',  // Win
+                    'rgba(231, 74, 59, 0.8)'    // Lost
                 ],
                 borderColor: [
-                    'rgba(78, 115, 223, 1)',
-                    'rgba(246, 194, 62, 1)',
-                    'rgba(108, 117, 125, 1)',
-                    'rgba(231, 74, 59, 1)',
-                    'rgba(108, 117, 125, 1)',
-                    'rgba(231, 74, 59, 1)',
-                    'rgba(54, 185, 204, 1)',
-                    'rgba(28, 200, 138, 1)'
+                    'rgba(78, 115, 223, 1)',    // New
+                    'rgba(108, 117, 125, 1)',   // Not Attend
+                    'rgba(231, 74, 59, 1)',     // Wrong Number
+                    'rgba(54, 185, 204, 1)',    // Interested
+                    'rgba(246, 194, 62, 1)',    // In Dealing
+                    'rgba(28, 200, 138, 1)',    // Win
+                    'rgba(231, 74, 59, 1)'      // Lost
                 ],
                 borderWidth: 1,
                 hoverOffset: 4
@@ -495,102 +466,45 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Daily Call Chart
-    var dailyCallCtx = document.getElementById('dailyCallChart').getContext('2d');
-    var dailyCallChart = new Chart(dailyCallCtx, {
-        type: 'bar',
-        data: {
-            labels: [
-                <?php foreach ($dailyCallCount as $day): ?>
-                    '<?php echo date('M d', strtotime($day['date'])); ?>',
-                <?php endforeach; ?>
-            ],
-            datasets: [{
-                label: 'Calls',
-                data: [
-                    <?php foreach ($dailyCallCount as $day): ?>
-                        <?php echo $day['count']; ?>,
-                    <?php endforeach; ?>
-                ],
-                backgroundColor: 'rgba(78, 115, 223, 0.5)',
-                borderColor: 'rgba(78, 115, 223, 1)',
-                borderWidth: 1,
-                borderRadius: 4,
-                barThickness: 16
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        drawBorder: false,
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    },
-                    ticks: {
-                        precision: 0
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    padding: 10,
-                    titleFont: {
-                        size: 14
-                    },
-                    bodyFont: {
-                        size: 13
-                    },
-                    displayColors: false
-                }
-            },
-            animation: {
-                duration: 1000
-            }
-        }
+    // Filter buttons
+    document.getElementById('todayBtn').addEventListener('click', function() {
+        window.location.href = '<?php echo APP_URL; ?>/dashboard?start_date=<?php echo date('Y-m-d'); ?>&end_date=<?php echo date('Y-m-d'); ?>';
     });
     
-    // Refresh dashboard
-    document.getElementById('refreshDashboard').addEventListener('click', function() {
-        this.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
-        this.disabled = true;
+    document.getElementById('weekBtn').addEventListener('click', function() {
+        var today = new Date();
+        var startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
+        var endOfWeek = new Date(today.setDate(today.getDate() + 6));
         
-        setTimeout(() => {
-            window.location.reload();
-        }, 1000);
+        window.location.href = '<?php echo APP_URL; ?>/dashboard?start_date=' + formatDate(startOfWeek) + '&end_date=' + formatDate(endOfWeek);
     });
     
-    // Period buttons for daily call chart
-    document.querySelectorAll('[data-period]').forEach(button => {
-        button.addEventListener('click', function() {
-            document.querySelectorAll('[data-period]').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            this.classList.add('active');
-            
-            // In a real application, this would fetch new data based on the period
-            // For now, we'll just simulate a loading state
-            dailyCallChart.data.datasets[0].backgroundColor = 'rgba(200, 200, 200, 0.5)';
-            dailyCallChart.update();
-            
-            setTimeout(() => {
-                dailyCallChart.data.datasets[0].backgroundColor = 'rgba(78, 115, 223, 0.5)';
-                dailyCallChart.update();
-            }, 500);
-        });
+    document.getElementById('monthBtn').addEventListener('click', function() {
+        var today = new Date();
+        var startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        var endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        window.location.href = '<?php echo APP_URL; ?>/dashboard?start_date=' + formatDate(startOfMonth) + '&end_date=' + formatDate(endOfMonth);
     });
+    
+    document.getElementById('refreshDashboard').addEventListener('click', function() {
+        window.location.reload();
+    });
+    
+    // Helper function to format date as YYYY-MM-DD
+    function formatDate(date) {
+        var d = new Date(date),
+            month = '' + (d.getMonth() + 1),
+            day = '' + d.getDate(),
+            year = d.getFullYear();
+        
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+        
+        return [year, month, day].join('-');
+    }
 });
 </script>
 
 <?php include 'views/templates/footer.php'; ?>
+

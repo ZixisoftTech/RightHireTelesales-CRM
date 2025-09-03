@@ -499,6 +499,8 @@ class UserController {
             // Sanitize input
             $name = sanitizeInput($_POST['name']);
             $email = sanitizeInput($_POST['email']);
+            $phone = sanitizeInput($_POST['phone'] ?? '');
+            $address = sanitizeInput($_POST['address'] ?? '');
             $currentPassword = $_POST['current_password'];
             $newPassword = $_POST['new_password'];
             $confirmPassword = $_POST['confirm_password'];
@@ -540,6 +542,8 @@ class UserController {
                 $data = [
                     'name' => $name,
                     'email' => $email,
+                    'phone' => $phone,
+                    'address' => $address,
                     'updated_by' => $id
                 ];
                 

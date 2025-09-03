@@ -31,6 +31,14 @@
                         <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
                     </div>
                     <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="phone" name="phone" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <textarea class="form-control" id="address" name="address" rows="2"><?php echo htmlspecialchars($user['address'] ?? ''); ?></textarea>
+                    </div>
+                    <div class="mb-3">
                         <label for="role" class="form-label">Role</label>
                         <input type="text" class="form-control" value="<?php echo ucfirst($user['role']); ?>" readonly>
                     </div>
@@ -60,4 +68,3 @@
 </div>
 
 <?php include 'views/templates/footer.php'; ?>
-

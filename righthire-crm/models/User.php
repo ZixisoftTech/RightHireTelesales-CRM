@@ -9,7 +9,7 @@ require_once 'Model.php';
 
 class User extends Model {
     protected $table = 'users';
-    protected $fillable = ['name', 'email', 'password', 'role', 'status', 'created_by', 'updated_by'];
+    protected $fillable = ['name', 'email', 'password', 'phone', 'address', 'role', 'status', 'created_by', 'updated_by'];
     
     /**
      * Create a new user

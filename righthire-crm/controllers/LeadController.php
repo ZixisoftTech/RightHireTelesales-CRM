@@ -147,10 +147,17 @@ class LeadController {
                     'city_id' => $city_id,
                     'status' => $status,
                     'remarks' => $remarks,
-                    'assigned_to' => $assigned_to,
                     'created_by' => $_SESSION['user_id'],
                     'created_at' => date('Y-m-d H:i:s')
                 ];
+                
+                // If employee is creating the lead, assign it to themselves
+                if (!hasRole('administrator') && empty($assigned_to)) {
+                    $assigned_to = $_SESSION['user_id'];
+                }
+                
+                // Set the assigned_to field
+                $leadData['assigned_to'] = $assigned_to;
                 
                 // Create lead
                 $leadId = $this->leadModel->createLead($leadData);

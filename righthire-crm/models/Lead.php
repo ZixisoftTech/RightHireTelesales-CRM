@@ -152,10 +152,20 @@ class Lead extends Model {
             $params[] = $searchTerm;
         }
         
-        // Check user role and restrict to assigned leads if not admin
+        // Check user role and restrict to assigned leads or territory leads if not admin
         if (!hasRole('administrator') && !isset($filters['assigned_to'])) {
-            $sql .= " AND l.assigned_to = ?";
-            $params[] = getCurrentUserId();
+            $userId = getCurrentUserId();
+            $sql .= " AND (l.assigned_to = ? OR EXISTS (
+                SELECT 1 FROM employee_territories et 
+                WHERE et.user_id = ? 
+                AND et.deleted_at IS NULL 
+                AND (
+                    (et.state_id = l.state_id AND et.city_id IS NULL) 
+                    OR (et.state_id = l.state_id AND et.city_id = l.city_id)
+                )
+            ))";
+            $params[] = $userId;
+            $params[] = $userId;
         }
         
         $sql .= " ORDER BY l.id DESC";
@@ -220,10 +230,20 @@ class Lead extends Model {
             $params[] = $searchTerm;
         }
         
-        // Check user role and restrict to assigned leads if not admin
+        // Check user role and restrict to assigned leads or territory leads if not admin
         if (!hasRole('administrator') && !isset($filters['assigned_to'])) {
-            $sql .= " AND l.assigned_to = ?";
-            $params[] = getCurrentUserId();
+            $userId = getCurrentUserId();
+            $sql .= " AND (l.assigned_to = ? OR EXISTS (
+                SELECT 1 FROM employee_territories et 
+                WHERE et.user_id = ? 
+                AND et.deleted_at IS NULL 
+                AND (
+                    (et.state_id = l.state_id AND et.city_id IS NULL) 
+                    OR (et.state_id = l.state_id AND et.city_id = l.city_id)
+                )
+            ))";
+            $params[] = $userId;
+            $params[] = $userId;
         }
         
         return $this->db->getValue($sql, $params);
@@ -893,17 +913,28 @@ class Lead extends Model {
     }
     
     /**
-     * Get leads for employee
+     * Get leads for employee (including territory-based leads)
      */
     public function getLeadsForEmployee($employeeId) {
         $sql = "SELECT l.*, s.name as state_name, c.name as city_name
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
-                WHERE l.deleted_at IS NULL AND l.assigned_to = ?
+                WHERE l.deleted_at IS NULL AND (
+                    l.assigned_to = ? 
+                    OR EXISTS (
+                        SELECT 1 FROM employee_territories et 
+                        WHERE et.user_id = ? 
+                        AND et.deleted_at IS NULL 
+                        AND (
+                            (et.state_id = l.state_id AND et.city_id IS NULL) 
+                            OR (et.state_id = l.state_id AND et.city_id = l.city_id)
+                        )
+                    )
+                )
                 ORDER BY l.id DESC";
         
-        return $this->db->getRows($sql, [$employeeId]);
+        return $this->db->getRows($sql, [$employeeId, $employeeId]);
     }
     
     /**

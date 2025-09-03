@@ -19,9 +19,21 @@ class Lead extends Model {
      */
     public function create($data) {
         // Handle assigned_to validation
-        if (isset($data['assigned_to']) && ($data['assigned_to'] === '' || $data['assigned_to'] === 0)) {
-            // If assigned_to is empty or 0, set it to NULL to satisfy foreign key constraint
-            $data['assigned_to'] = null;
+        if (isset($data['assigned_to'])) {
+            if ($data['assigned_to'] === '' || $data['assigned_to'] === 0 || $data['assigned_to'] === '0') {
+                // If assigned_to is empty or 0, set it to NULL to satisfy foreign key constraint
+                $data['assigned_to'] = null;
+            } else {
+                // Verify that the assigned_to user exists in the database
+                $sql = "SELECT COUNT(*) FROM users WHERE id = ? AND deleted_at IS NULL";
+                $userExists = $this->db->getValue($sql, [$data['assigned_to']]) > 0;
+                
+                if (!$userExists) {
+                    // If user doesn't exist, set assigned_to to NULL to avoid foreign key constraint violation
+                    error_log("Warning: Attempted to assign lead to non-existent user ID: {$data['assigned_to']}");
+                    $data['assigned_to'] = null;
+                }
+            }
         }
         
         // Ensure city_id is not null if state_id is provided

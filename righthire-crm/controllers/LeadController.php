@@ -584,6 +584,17 @@ class LeadController {
             // Get assigned to
             $assignedTo = isset($_POST['assigned_to']) && !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
             
+            // Validate that the assigned_to user exists in the database
+            if ($assignedTo !== null) {
+                $userExists = $this->userModel->getById($assignedTo);
+                if (!$userExists) {
+                    // If user doesn't exist, set assignedTo to null to avoid foreign key constraint violation
+                    $assignedTo = null;
+                    error_log("Warning: Attempted to assign leads to non-existent user ID: {$_POST['assigned_to']}");
+                    setFlashMessage('warning', 'The selected employee does not exist. Leads will be imported without assignment.');
+                }
+            }
+            
             // Open file
             $handle = fopen($fileTmpName, 'r');
             

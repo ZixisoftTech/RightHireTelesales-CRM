@@ -701,7 +701,8 @@ class Lead extends Model {
         $isAdmin = hasRole('administrator');
         $today = date('Y-m-d');
         
-        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name,
+                (SELECT remarks FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) as last_remark
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
@@ -738,7 +739,8 @@ class Lead extends Model {
         $isAdmin = hasRole('administrator');
         $today = date('Y-m-d');
         
-        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name,
+                (SELECT remarks FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) as last_remark
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id

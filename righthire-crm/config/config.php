@@ -15,6 +15,19 @@ define('APP_URL', 'http://localhost/righthire-crm');
 define('RECORDS_PER_PAGE', 25);
 define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
 
+// Define lead statuses
+define('LEAD_STATUSES', [
+    'new' => 'New',
+    'follow_up' => 'Follow Up',
+    'interested' => 'Interested',
+    'not_interested' => 'Not Interested',
+    'not_attend' => 'Not Attend',
+    'wrong_number' => 'Wrong Number',
+    'win' => 'Win',
+    'lost' => 'Lost',
+    'other' => 'Other'
+]);
+
 // Database configuration
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'righthire_crm');

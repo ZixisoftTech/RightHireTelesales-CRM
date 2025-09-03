@@ -127,7 +127,7 @@
     </div>
     
     <!-- Today's Follow-ups -->
-    <div class="col-lg-4 mb-4">
+    <div class="col-lg-12 mb-4">
         <div class="card h-100">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Today's Follow-ups</h5>
@@ -145,11 +145,17 @@
                             <thead>
                                 <tr>
                                     <th>Lead Name</th>
+                                    <th>Phone</th>
+                                    <th>Email</th>
+                                    <th>State</th>
+                                    <th>City</th>
+                                    <th>Status</th>
                                     <?php if (hasRole('administrator')): ?>
-                                        <th>Employee</th>
+                                        <th>Assigned To</th>
                                     <?php endif; ?>
-                                    <th>Time</th>
-                                    <th></th>
+                                    <th>Follow-Up Date & Time</th>
+                                    <th>Last Remark</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -160,15 +166,24 @@
                                                 <?php echo htmlspecialchars($followUp['name']); ?>
                                             </a>
                                         </td>
+                                        <td><?php echo htmlspecialchars($followUp['phone']); ?></td>
+                                        <td><?php echo htmlspecialchars($followUp['email']); ?></td>
+                                        <td><?php echo htmlspecialchars($followUp['state_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($followUp['city_name']); ?></td>
+                                        <td><?php echo getStatusBadge($followUp['status']); ?></td>
                                         <?php if (hasRole('administrator')): ?>
                                             <td><?php echo htmlspecialchars($followUp['assigned_to_name']); ?></td>
                                         <?php endif; ?>
                                         <td>
                                             <span class="badge bg-warning">
-                                                <?php echo date('h:i A', strtotime($followUp['follow_up_date'])); ?>
+                                                <?php echo formatDateTime($followUp['follow_up_date']); ?>
                                             </span>
                                         </td>
-                                        <td class="text-end">
+                                        <td><?php echo htmlspecialchars($followUp['remarks']); ?></td>
+                                        <td>
+                                            <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-info" title="View Lead">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
                                             <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-success" title="Add Call Log">
                                                 <i class="fas fa-phone"></i>
                                             </a>
@@ -191,7 +206,7 @@
 
 <div class="row">
     <!-- Missed Follow-ups -->
-    <div class="col-lg-6 mb-4">
+    <div class="col-lg-12 mb-4">
         <div class="card h-100">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Missed Follow-ups</h5>
@@ -209,11 +224,17 @@
                             <thead>
                                 <tr>
                                     <th>Lead Name</th>
+                                    <th>Phone</th>
+                                    <th>Email</th>
+                                    <th>State</th>
+                                    <th>City</th>
+                                    <th>Status</th>
                                     <?php if (hasRole('administrator')): ?>
-                                        <th>Employee</th>
+                                        <th>Assigned To</th>
                                     <?php endif; ?>
-                                    <th>Missed Date</th>
-                                    <th></th>
+                                    <th>Missed Follow-Up Date</th>
+                                    <th>Last Remark</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -224,15 +245,24 @@
                                                 <?php echo htmlspecialchars($followUp['name']); ?>
                                             </a>
                                         </td>
+                                        <td><?php echo htmlspecialchars($followUp['phone']); ?></td>
+                                        <td><?php echo htmlspecialchars($followUp['email']); ?></td>
+                                        <td><?php echo htmlspecialchars($followUp['state_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($followUp['city_name']); ?></td>
+                                        <td><?php echo getStatusBadge($followUp['status']); ?></td>
                                         <?php if (hasRole('administrator')): ?>
                                             <td><?php echo htmlspecialchars($followUp['assigned_to_name']); ?></td>
                                         <?php endif; ?>
                                         <td>
                                             <span class="badge bg-danger">
-                                                <?php echo date('d M Y', strtotime($followUp['follow_up_date'])); ?>
+                                                <?php echo formatDateTime($followUp['follow_up_date']); ?>
                                             </span>
                                         </td>
-                                        <td class="text-end">
+                                        <td><?php echo htmlspecialchars($followUp['last_remark']); ?></td>
+                                        <td>
+                                            <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-info" title="View Lead">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
                                             <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-success" title="Add Call Log">
                                                 <i class="fas fa-phone"></i>
                                             </a>
@@ -253,7 +283,7 @@
     </div>
 
     <!-- Daily Call Activity -->
-    <div class="col-lg-6 mb-4">
+    <div class="col-lg-8 mb-4">
         <div class="card h-100">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Daily Call Activity</h5>
@@ -269,9 +299,7 @@
             </div>
         </div>
     </div>
-</div>
 
-<div class="row">
     <!-- Recent Call Logs -->
     <div class="col-lg-4 mb-4">
         <div class="card h-100">
@@ -294,6 +322,9 @@
                                         <p class="mb-1">
                                             <?php echo getStatusBadge($call['status']); ?>
                                         </p>
+                                        <small class="text-muted">
+                                            <i class="fas fa-user-edit me-1"></i> <?php echo htmlspecialchars($call['created_by_name']); ?>
+                                        </small>
                                     </div>
                                     <div class="text-end">
                                         <small class="text-muted">

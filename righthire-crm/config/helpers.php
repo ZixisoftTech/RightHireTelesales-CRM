@@ -34,6 +34,55 @@ function formatDate($date) {
 }
 
 /**
+ * Get status badge HTML
+ */
+function getStatusBadge($status) {
+    $badgeClasses = [
+        'new' => 'bg-primary',
+        'follow_up' => 'bg-warning',
+        'interested' => 'bg-info',
+        'not_interested' => 'bg-secondary',
+        'not_attend' => 'bg-danger',
+        'wrong_number' => 'bg-danger',
+        'win' => 'bg-success',
+        'lost' => 'bg-dark',
+        'other' => 'bg-secondary'
+    ];
+    
+    $statusLabel = isset(LEAD_STATUSES[$status]) ? LEAD_STATUSES[$status] : ucfirst(str_replace('_', ' ', $status));
+    $badgeClass = isset($badgeClasses[$status]) ? $badgeClasses[$status] : 'bg-secondary';
+    
+    return '<span class="badge ' . $badgeClass . '">' . $statusLabel . '</span>';
+}
+
+/**
+ * Get query string for pagination
+ * 
+ * @param array $excludeParams Parameters to exclude from query string
+ * @return string Query string with leading &
+ */
+function getQueryString($excludeParams = []) {
+    $params = $_GET;
+    
+    // Remove excluded parameters
+    foreach ($excludeParams as $param) {
+        if (isset($params[$param])) {
+            unset($params[$param]);
+        }
+    }
+    
+    // Build query string
+    $queryString = '';
+    foreach ($params as $key => $value) {
+        if (!empty($value)) {
+            $queryString .= '&' . urlencode($key) . '=' . urlencode($value);
+        }
+    }
+    
+    return $queryString;
+}
+
+/**
  * Set flash message
  */
 function setFlashMessage($type, $message) {

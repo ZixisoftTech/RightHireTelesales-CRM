@@ -574,10 +574,15 @@ class LeadController {
             }
             
             // Status-specific validation
-            if ($status === 'interested' && empty($_POST['follow_up_date'])) {
-                $errors[] = 'Follow-up date is required for Interested status';
-            } else if ($status === 'interested') {
+            if (($status === 'interested' || $status === 'in_dealing') && empty($_POST['follow_up_date'])) {
+                $errors[] = 'Follow-up date is required for ' . ($status === 'interested' ? 'Interested' : 'In Dealing') . ' status';
+            } else if ($status === 'interested' || $status === 'in_dealing') {
                 $follow_up_date = sanitizeInput($_POST['follow_up_date']);
+            }
+            
+            // Prevent follow-ups for WON/LOST leads
+            if (($status === 'win' || $status === 'lost') && !empty($_POST['follow_up_date'])) {
+                $errors[] = 'Follow-up is not allowed for ' . ($status === 'win' ? 'Won' : 'Lost') . ' leads';
             }
             
             // Region validation for Lost status
@@ -754,8 +759,10 @@ class LeadController {
                 }
                 
                 // Get city ID if city name is provided
-                $cityId = null;
-                if ($cityIndex !== false && !empty($row[$cityIndex]) && !empty($stateId)) {
+                $cityId = isset($_POST['city_id']) && !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null;
+                
+                // If city is specified in the CSV and no city_id is provided in the form, try to find it
+                if ($cityId === null && $cityIndex !== false && !empty($row[$cityIndex]) && !empty($stateId)) {
                     $cityName = $row[$cityIndex];
                     $city = $this->cityModel->getCityByNameAndState($cityName, $stateId);
                     

@@ -654,7 +654,12 @@ class Lead extends Model {
                     SUM(CASE WHEN status = 'other' THEN 1 ELSE 0 END) as other,
                     SUM(CASE WHEN status = 'dead' THEN 1 ELSE 0 END) as dead,
                     SUM(CASE WHEN status = 'interested' THEN 1 ELSE 0 END) as interested,
-                    SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) as wins
+                    SUM(CASE WHEN status = 'in_dealing' THEN 1 ELSE 0 END) as in_dealing,
+                    SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) as wins,
+                    SUM(CASE WHEN status = 'lost' THEN 1 ELSE 0 END) as lost,
+                    -- Monthly tracking for wins and losses
+                    SUM(CASE WHEN status = 'win' AND MONTH(updated_at) = MONTH(CURRENT_DATE()) AND YEAR(updated_at) = YEAR(CURRENT_DATE()) THEN 1 ELSE 0 END) as monthly_wins,
+                    SUM(CASE WHEN status = 'lost' AND MONTH(updated_at) = MONTH(CURRENT_DATE()) AND YEAR(updated_at) = YEAR(CURRENT_DATE()) THEN 1 ELSE 0 END) as monthly_lost
                 FROM {$this->table}
                 WHERE deleted_at IS NULL";
         
@@ -702,13 +707,14 @@ class Lead extends Model {
         $today = date('Y-m-d');
         
         $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name,
-                (SELECT remarks FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) as last_remark
+                (SELECT remarks FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) as last_remark,
+                (SELECT created_at FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) as last_follow_up
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
                 WHERE l.deleted_at IS NULL 
-                AND l.status = 'follow_up' 
+                AND l.follow_up_date IS NOT NULL 
                 AND DATE(l.follow_up_date) = ?";
         
         $params = [$today];
@@ -740,15 +746,16 @@ class Lead extends Model {
         $today = date('Y-m-d');
         
         $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name,
-                (SELECT remarks FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) as last_remark
+                (SELECT remarks FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) as last_remark,
+                (SELECT created_at FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) as last_follow_up
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
                 WHERE l.deleted_at IS NULL 
-                AND l.status = 'follow_up' 
-                AND DATE(l.follow_up_date) < ?
-                AND l.follow_up_date IS NOT NULL";
+                AND l.follow_up_date IS NOT NULL
+                AND l.status NOT IN ('win', 'lost')
+                AND DATE(l.follow_up_date) < ?";
         
         $params = [$today];
         
@@ -786,13 +793,15 @@ class Lead extends Model {
         $offset = ($page - 1) * $limit;
         
         $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name,
-                (SELECT MAX(created_at) FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL) as last_follow_up
+                (SELECT MAX(created_at) FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL) as last_follow_up,
+                (SELECT remarks FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1) as last_remark
                 FROM {$this->table} l
                 LEFT JOIN states s ON l.state_id = s.id
                 LEFT JOIN cities c ON l.city_id = c.id
                 LEFT JOIN users u ON l.assigned_to = u.id
                 WHERE l.deleted_at IS NULL 
-                AND l.follow_up_date IS NOT NULL";
+                AND l.follow_up_date IS NOT NULL
+                AND l.status NOT IN ('win', 'lost')";
         
         $params = [];
         
@@ -864,7 +873,8 @@ class Lead extends Model {
         $sql = "SELECT COUNT(*) as total
                 FROM {$this->table} l
                 WHERE l.deleted_at IS NULL 
-                AND l.follow_up_date IS NOT NULL";
+                AND l.follow_up_date IS NOT NULL
+                AND l.status NOT IN ('win', 'lost')";
         
         $params = [];
         
@@ -1202,12 +1212,13 @@ class Lead extends Model {
             ];
             
             // Handle follow-up date for all statuses that need it
-            if ($status == 'follow_up' || $status == 'interested' || $status == 'not_attend' || $status == 'wrong_number') {
+            if ($status == 'follow_up' || $status == 'interested' || $status == 'in_dealing' || $status == 'not_attend' || $status == 'wrong_number') {
                 if ($status == 'follow_up' && empty($followUpDate)) {
                     throw new Exception("Follow-up date is required for follow-up status");
                 }
                 $data['follow_up_date'] = $followUpDate;
             } else {
+                // For WON/LOST leads, no follow-ups are allowed
                 $data['follow_up_date'] = null;
             }
             

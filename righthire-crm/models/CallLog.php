@@ -73,6 +73,43 @@ class CallLog extends Model {
     }
     
     /**
+     * Get recent call logs for dashboard
+     * 
+     * @param int $employeeId Employee ID filter (0 for all)
+     * @param int $limit Number of records to return
+     * @return array Array of call logs
+     */
+    public function getRecentCallLogs($employeeId = 0, $limit = 10) {
+        $userId = getCurrentUserId();
+        $isAdmin = hasRole('administrator');
+        
+        $sql = "SELECT cl.*, l.name as lead_name, l.status as status, u.name as created_by_name
+                FROM {$this->table} cl
+                LEFT JOIN leads l ON cl.lead_id = l.id
+                LEFT JOIN users u ON cl.created_by = u.id
+                WHERE cl.deleted_at IS NULL";
+        
+        $params = [];
+        
+        // Apply employee filter
+        if ($employeeId > 0) {
+            $sql .= " AND (cl.created_by = ? OR l.assigned_to = ?)";
+            $params[] = $employeeId;
+            $params[] = $employeeId;
+        } else if (!$isAdmin) {
+            // If not admin and no specific employee selected, only show calls made by the user or for leads assigned to the user
+            $sql .= " AND (cl.created_by = ? OR l.assigned_to = ?)";
+            $params[] = $userId;
+            $params[] = $userId;
+        }
+        
+        $sql .= " ORDER BY cl.created_at DESC LIMIT ?";
+        $params[] = $limit;
+        
+        return $this->db->getRows($sql, $params);
+    }
+    
+    /**
      * Get call logs by date range
      */
     public function getByDateRange($dateFrom, $dateTo, $page = 1, $limit = RECORDS_PER_PAGE, $userId = null) {

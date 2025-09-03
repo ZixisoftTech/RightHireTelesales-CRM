@@ -36,14 +36,14 @@ class FollowUpController {
             exit;
         }
         
-        // Get filter parameters
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $status = isset($_GET['status']) ? sanitizeInput($_GET['status']) : '';
-        $stateId = isset($_GET['state_id']) ? (int)$_GET['state_id'] : 0;
-        $cityId = isset($_GET['city_id']) ? (int)$_GET['city_id'] : 0;
-        $employeeId = isset($_GET['employee_id']) ? (int)$_GET['employee_id'] : 0;
-        $startDate = isset($_GET['start_date']) ? sanitizeInput($_GET['start_date']) : '';
-        $endDate = isset($_GET['end_date']) ? sanitizeInput($_GET['end_date']) : '';
+        // Get filter parameters with validation
+        $page = isset($_GET['page']) && !empty($_GET['page']) ? (int)$_GET['page'] : 1;
+        $status = isset($_GET['status']) && !empty($_GET['status']) ? sanitizeInput($_GET['status']) : '';
+        $stateId = isset($_GET['state_id']) && !empty($_GET['state_id']) ? (int)$_GET['state_id'] : 0;
+        $cityId = isset($_GET['city_id']) && !empty($_GET['city_id']) ? (int)$_GET['city_id'] : 0;
+        $employeeId = isset($_GET['employee_id']) && !empty($_GET['employee_id']) ? (int)$_GET['employee_id'] : 0;
+        $startDate = isset($_GET['start_date']) && !empty($_GET['start_date']) ? sanitizeInput($_GET['start_date']) : '';
+        $endDate = isset($_GET['end_date']) && !empty($_GET['end_date']) ? sanitizeInput($_GET['end_date']) : '';
         
         // Validate employee access for non-admins
         if (!hasRole('administrator') && $employeeId !== 0 && $employeeId !== getCurrentUserId()) {

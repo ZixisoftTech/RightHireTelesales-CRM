@@ -57,13 +57,10 @@ class DashboardController {
         $dailyCallCount = $this->leadModel->getDailyCallCount($employeeId, $startDate, $endDate);
         
         // Get recent call logs with filters
-        $recentCalls = $this->leadModel->getRecentCallLogs($employeeId, $startDate, $endDate);
+        $recentCalls = $this->callLogModel->getRecentCallLogs($employeeId, 10);
         
-        // Get employee performance stats (admin only)
-        $employeeStats = [];
-        if (hasRole('administrator')) {
-            $employeeStats = $this->leadModel->getEmployeePerformanceStats($employeeId, $startDate, $endDate);
-        }
+        // Get employee performance stats (for all users)
+        $employeeStats = $this->leadModel->getEmployeePerformanceStats($employeeId, $startDate, $endDate);
         
         // Get all active employees for filter dropdown (admin only)
         $employees = [];

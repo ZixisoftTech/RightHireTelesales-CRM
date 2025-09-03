@@ -18,15 +18,12 @@ define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
 // Define lead statuses
 define('LEAD_STATUSES', [
     'new' => 'New',
-    'follow_up' => 'Follow Up',
-    'interested' => 'Interested',
-    'in_dealing' => 'In Dealing',
-    'not_interested' => 'Not Interested',
     'not_attend' => 'Not Attend',
     'wrong_number' => 'Wrong Number',
-    'win' => 'Win',
-    'lost' => 'Lost',
-    'other' => 'Other'
+    'interested' => 'Intrested',
+    'in_dealing' => 'In Dealing',
+    'win' => 'WIN',
+    'lost' => 'Lost'
 ]);
 
 // Database configuration

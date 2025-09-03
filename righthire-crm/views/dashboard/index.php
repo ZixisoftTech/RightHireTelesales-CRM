@@ -23,79 +23,87 @@
 <!-- Status Cards -->
 <div class="row">
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-dashboard card-new h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-muted mb-0">New Leads</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['new_leads']; ?></h2>
-                        <div class="small text-success mt-1">
-                            <i class="fas fa-arrow-up"></i> 3.48% since last week
+        <a href="<?php echo APP_URL; ?>/leads?status=new" class="text-decoration-none">
+            <div class="card card-dashboard card-new h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-0">New Leads</h6>
+                            <h2 class="mt-2 mb-0"><?php echo $stats['new_leads']; ?></h2>
+                            <div class="small text-success mt-1">
+                                <i class="fas fa-arrow-up"></i> 3.48% since last week
+                            </div>
                         </div>
-                    </div>
-                    <div class="bg-primary bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-user-plus text-primary fa-2x"></i>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-user-plus text-primary fa-2x"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-dashboard card-follow-up h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-muted mb-0">Follow-ups</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['follow_ups']; ?></h2>
-                        <div class="small text-success mt-1">
-                            <i class="fas fa-arrow-up"></i> 2.15% since last week
+        <a href="<?php echo APP_URL; ?>/followups" class="text-decoration-none">
+            <div class="card card-dashboard card-follow-up h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-0">Follow-ups</h6>
+                            <h2 class="mt-2 mb-0"><?php echo $stats['follow_ups']; ?></h2>
+                            <div class="small text-success mt-1">
+                                <i class="fas fa-arrow-up"></i> 2.15% since last week
+                            </div>
                         </div>
-                    </div>
-                    <div class="bg-warning bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-calendar-alt text-warning fa-2x"></i>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-calendar-alt text-warning fa-2x"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-dashboard card-in-dealing h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-muted mb-0">In Dealing</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['in_dealing']; ?></h2>
-                        <div class="small text-success mt-1">
-                            <i class="fas fa-arrow-up"></i> 5.27% since last week
+        <a href="<?php echo APP_URL; ?>/leads?status=in_dealing" class="text-decoration-none">
+            <div class="card card-dashboard card-in-dealing h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-0">In Dealing</h6>
+                            <h2 class="mt-2 mb-0"><?php echo $stats['in_dealing']; ?></h2>
+                            <div class="small text-success mt-1">
+                                <i class="fas fa-arrow-up"></i> 5.27% since last week
+                            </div>
                         </div>
-                    </div>
-                    <div class="bg-info bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-handshake text-info fa-2x"></i>
+                        <div class="bg-info bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-handshake text-info fa-2x"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card card-dashboard card-win h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title text-muted mb-0">Won</h6>
-                        <h2 class="mt-2 mb-0"><?php echo $stats['wins']; ?></h2>
-                        <div class="small text-success mt-1">
-                            <i class="fas fa-calendar-alt"></i> <?php echo $stats['monthly_wins']; ?> this month
+        <a href="<?php echo APP_URL; ?>/leads?status=win" class="text-decoration-none">
+            <div class="card card-dashboard card-win h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-0">Won</h6>
+                            <h2 class="mt-2 mb-0"><?php echo $stats['wins']; ?></h2>
+                            <div class="small text-success mt-1">
+                                <i class="fas fa-calendar-alt"></i> <?php echo $stats['monthly_wins']; ?> this month
+                            </div>
                         </div>
-                    </div>
-                    <div class="bg-success bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-trophy text-success fa-2x"></i>
+                        <div class="bg-success bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-trophy text-success fa-2x"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -428,37 +436,34 @@ document.addEventListener('DOMContentLoaded', function() {
     var leadStatusChart = new Chart(leadStatusCtx, {
         type: 'doughnut',
         data: {
-            labels: ['New', 'Follow-up', 'Not Attend', 'Wrong Number', 'Other', 'Dead', 'Interested', 'Win'],
+            labels: ['New', 'Not Attend', 'Wrong Number', 'Intrested', 'In Dealing', 'WIN', 'Lost'],
             datasets: [{
                 data: [
                     <?php echo $stats['new_leads']; ?>,
-                    <?php echo $stats['follow_ups']; ?>,
                     <?php echo $stats['not_attend']; ?>,
                     <?php echo $stats['wrong_number']; ?>,
-                    <?php echo $stats['other']; ?>,
-                    <?php echo $stats['dead']; ?>,
                     <?php echo $stats['interested']; ?>,
-                    <?php echo $stats['wins']; ?>
+                    <?php echo $stats['in_dealing']; ?>,
+                    <?php echo $stats['wins']; ?>,
+                    <?php echo $stats['lost']; ?>
                 ],
                 backgroundColor: [
-                    'rgba(78, 115, 223, 0.8)',
-                    'rgba(246, 194, 62, 0.8)',
-                    'rgba(108, 117, 125, 0.8)',
-                    'rgba(231, 74, 59, 0.8)',
-                    'rgba(108, 117, 125, 0.8)',
-                    'rgba(231, 74, 59, 0.8)',
-                    'rgba(54, 185, 204, 0.8)',
-                    'rgba(28, 200, 138, 0.8)'
+                    'rgba(78, 115, 223, 0.8)',  // New
+                    'rgba(108, 117, 125, 0.8)', // Not Attend
+                    'rgba(231, 74, 59, 0.8)',   // Wrong Number
+                    'rgba(54, 185, 204, 0.8)',  // Intrested
+                    'rgba(54, 185, 204, 0.8)',  // In Dealing
+                    'rgba(28, 200, 138, 0.8)',  // WIN
+                    'rgba(231, 74, 59, 0.8)'    // Lost
                 ],
                 borderColor: [
-                    'rgba(78, 115, 223, 1)',
-                    'rgba(246, 194, 62, 1)',
-                    'rgba(108, 117, 125, 1)',
-                    'rgba(231, 74, 59, 1)',
-                    'rgba(108, 117, 125, 1)',
-                    'rgba(231, 74, 59, 1)',
-                    'rgba(54, 185, 204, 1)',
-                    'rgba(28, 200, 138, 1)'
+                    'rgba(78, 115, 223, 1)',    // New
+                    'rgba(108, 117, 125, 1)',   // Not Attend
+                    'rgba(231, 74, 59, 1)',     // Wrong Number
+                    'rgba(54, 185, 204, 1)',    // Intrested
+                    'rgba(54, 185, 204, 1)',    // In Dealing
+                    'rgba(28, 200, 138, 1)',    // WIN
+                    'rgba(231, 74, 59, 1)'      // Lost
                 ],
                 borderWidth: 1,
                 hoverOffset: 4

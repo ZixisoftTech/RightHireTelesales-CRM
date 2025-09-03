@@ -117,26 +117,55 @@
                                         <small class="text-muted"><?php echo formatDateTime($log['created_at']); ?></small>
                                     </div>
                                     <p class="mb-1"><?php echo htmlspecialchars($log['remarks']); ?></p>
-                                    <?php if (!empty($log['follow_up_date'])): ?>
-                                        <small class="text-primary">
-                                            <i class="fas fa-calendar-alt"></i> 
-                                            Follow-up: <?php echo formatDateTime($log['follow_up_date']); ?>
+                                    <div class="d-flex justify-content-between">
+                                        <?php if (!empty($log['follow_up_date'])): ?>
+                                            <small class="text-primary">
+                                                <i class="fas fa-calendar-alt"></i> 
+                                                Follow-up: <?php echo formatDateTime($log['follow_up_date']); ?>
+                                            </small>
+                                        <?php else: ?>
+                                            <small></small>
+                                        <?php endif; ?>
+                                        <small class="text-muted">
+                                            <i class="fas fa-user"></i> 
+                                            By: <?php echo htmlspecialchars($log['created_by_name'] ?? 'Unknown'); ?>
                                         </small>
-                                    <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
             </div>
-            <?php if (hasRole('administrator') || $lead['assigned_to'] == $_SESSION['user_id']): ?>
-                <?php if ($lead['status'] !== 'won' && $lead['status'] !== 'lost'): ?>
-                    <div class="card-footer bg-light">
-                        <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-success w-100">
-                            <i class="fas fa-phone"></i> Add New Call Log
-                        </a>
-                    </div>
-                <?php endif; ?>
+            <?php 
+            // Check if user is admin, assigned to the lead, or has territory access
+            $hasAccess = hasRole('administrator') || $lead['assigned_to'] == $_SESSION['user_id'];
+            
+            // If not admin and not assigned, check territory access
+            if (!$hasAccess && !hasRole('administrator')) {
+                $userTerritories = $GLOBALS['db']->getRows(
+                    "SELECT state_id, city_id FROM employee_territories 
+                    WHERE user_id = ? AND deleted_at IS NULL", 
+                    [$_SESSION['user_id']]
+                );
+                
+                foreach ($userTerritories as $territory) {
+                    if ($territory['state_id'] == $lead['state_id']) {
+                        if ($territory['city_id'] === null || $territory['city_id'] == $lead['city_id']) {
+                            $hasAccess = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if ($hasAccess && $lead['status'] !== 'won' && $lead['status'] !== 'lost'): 
+            ?>
+                <div class="card-footer bg-light">
+                    <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-success w-100">
+                        <i class="fas fa-phone"></i> Add New Call Log
+                    </a>
+                </div>
             <?php endif; ?>
         </div>
     </div>

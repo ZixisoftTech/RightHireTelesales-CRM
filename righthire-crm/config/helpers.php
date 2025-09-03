@@ -46,6 +46,7 @@ function getStatusBadge($status) {
         'wrong_number' => 'bg-danger',
         'win' => 'bg-success',
         'lost' => 'bg-dark',
+        'dead' => 'bg-danger',
         'other' => 'bg-secondary'
     ];
     
@@ -195,42 +196,7 @@ function getCurrentUserRole() {
     return isLoggedIn() ? $_SESSION['role'] : null;
 }
 
-/**
- * Get status badge HTML
- */
-function getStatusBadge($status) {
-    $badgeClass = 'bg-primary';
-    $statusText = ucfirst(str_replace('_', ' ', $status));
-    
-    switch ($status) {
-        case 'new':
-            $badgeClass = 'bg-primary';
-            break;
-        case 'follow_up':
-            $badgeClass = 'bg-warning';
-            break;
-        case 'not_attend':
-            $badgeClass = 'bg-secondary';
-            break;
-        case 'wrong_number':
-            $badgeClass = 'bg-danger';
-            break;
-        case 'other':
-            $badgeClass = 'bg-secondary';
-            break;
-        case 'dead':
-            $badgeClass = 'bg-danger';
-            break;
-        case 'interested':
-            $badgeClass = 'bg-info';
-            break;
-        case 'win':
-            $badgeClass = 'bg-success';
-            break;
-    }
-    
-    return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
-}
+// getStatusBadge function is already defined above
 
 /**
  * Get pagination links

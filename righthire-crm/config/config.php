@@ -10,7 +10,7 @@ session_start();
 
 // Define constants
 define('APP_NAME', 'Right Hire CRM');
-define('APP_VERSION', '1.0.0');
+define('APP_VERSION', '2.0.0');
 define('APP_URL', 'http://localhost/righthire-crm');
 define('RECORDS_PER_PAGE', 25);
 define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10MB
@@ -43,4 +43,3 @@ if (true) { // Set to false in production
     ini_set('display_startup_errors', 0);
     error_reporting(0);
 }
-

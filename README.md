@@ -1,4 +1,4 @@
-# Right Hire CRM
+# Right Hire CRM - Version 2
 
 Right Hire CRM is a web-based lead management and outbound call tracking platform designed for sales administrators and outbound call agents. The system streamlines lead management with geographical assignment and real-time call outcome tracking.
 
@@ -91,4 +91,3 @@ This project is proprietary software. Unauthorized copying, modification, distri
 ## Support
 
 For support, please contact support@getrighthire.com
-

@@ -368,34 +368,54 @@ class LeadController {
         // Get lead ID
         $leadId = (int)$_GET['id'];
         
+        // Get lead with related data
+        $lead = $this->leadModel->getLeadById($leadId);
+        
+        // Check if lead exists
+        if (!$lead) {
+            setFlashMessage('error', 'Lead not found');
+            redirect('leads');
+            exit;
+        }
+        
+        // Get call logs for this lead
+        $callLogs = $this->callLogModel->getByLeadId($leadId);
+        $callLogCount = count($callLogs);
+        
         // Check if confirmation is provided
         if (isset($_GET['confirm']) && $_GET['confirm'] == 1) {
-            // Delete lead
-            $deleted = $this->leadModel->deleteLead($leadId);
+            // HARD DELETE lead and all associated data
+            $this->db->beginTransaction();
             
-            if ($deleted) {
+            try {
+                // Delete call logs for this lead
+                $this->db->query("DELETE FROM call_logs WHERE lead_id = ?", [$leadId]);
+                
+                // Delete audit logs for call logs
+                $this->db->query("DELETE al FROM audit_logs al 
+                                 WHERE al.table_name = 'call_logs' 
+                                 AND al.record_id IN (SELECT id FROM call_logs WHERE lead_id = ?)", [$leadId]);
+                
+                // Delete audit logs for this lead
+                $this->db->query("DELETE FROM audit_logs WHERE table_name = 'leads' AND record_id = ?", [$leadId]);
+                
+                // Hard delete the lead
+                $deleted = $this->leadModel->hardDelete($leadId);
+                
+                $this->db->commit();
+                
                 // Set success message
-                setFlashMessage('success', 'Lead deleted successfully');
-            } else {
-                // Set error message
-                setFlashMessage('error', 'Failed to delete lead');
+                setFlashMessage('success', 'Lead and all associated data permanently deleted');
+            } catch (Exception $e) {
+                $this->db->rollback();
+                setFlashMessage('error', 'Failed to delete lead: ' . $e->getMessage());
             }
             
             // Redirect to leads page
             redirect('leads');
             exit;
         } else {
-            // Get lead
-            $lead = $this->leadModel->getLeadById($leadId);
-            
-            // Check if lead exists
-            if (!$lead) {
-                setFlashMessage('error', 'Lead not found');
-                redirect('leads');
-                exit;
-            }
-            
-            // Load confirmation view
+            // Load confirmation view with call log information
             include __DIR__ . '/../views/leads/delete_confirm.php';
         }
     }

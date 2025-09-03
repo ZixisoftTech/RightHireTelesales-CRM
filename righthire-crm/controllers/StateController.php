@@ -211,36 +211,65 @@ class StateController {
         $cityCount = $this->stateModel->getCityCount($id);
         $leadCount = $this->stateModel->getLeadCount($id);
         
+        // Get cities and leads for display in confirmation popup
+        $cities = [];
+        $leads = [];
+        
+        if ($cityCount > 0) {
+            $cities = $this->cityModel->getAllByStateId($id);
+        }
+        
+        if ($leadCount > 0) {
+            $leads = $this->stateModel->getLeadsByStateId($id, 10); // Limit to 10 for display
+        }
+        
         // If there are cities or leads associated with this state
         if ($cityCount > 0 || $leadCount > 0) {
             // If this is a confirmation request
             if (isset($_GET['confirm']) && $_GET['confirm'] == 1) {
-                // Delete all associated cities and leads first (cascade delete)
+                // HARD DELETE all associated data
                 $this->db->beginTransaction();
                 
                 try {
                     // First, get all cities in this state
                     $cities = $this->cityModel->getAllByStateId($id);
                     
-                    // For each city, soft delete leads associated with it
+                    // For each city, delete all associated data
                     foreach ($cities as $city) {
-                        $this->db->query("UPDATE leads SET deleted_at = NOW(), updated_by = ? WHERE city_id = ? AND deleted_at IS NULL", 
-                            [getCurrentUserId(), $city['id']]);
+                        // Delete call logs for leads in this city
+                        $this->db->query("DELETE cl FROM call_logs cl 
+                                         INNER JOIN leads l ON cl.lead_id = l.id 
+                                         WHERE l.city_id = ?", [$city['id']]);
+                        
+                        // Delete audit logs for leads in this city
+                        $this->db->query("DELETE al FROM audit_logs al 
+                                         WHERE al.table_name = 'leads' 
+                                         AND al.record_id IN (SELECT id FROM leads WHERE city_id = ?)", [$city['id']]);
+                        
+                        // Delete leads associated with this city
+                        $this->db->query("DELETE FROM leads WHERE city_id = ?", [$city['id']]);
+                        
+                        // Delete audit logs for this city
+                        $this->db->query("DELETE FROM audit_logs WHERE table_name = 'cities' AND record_id = ?", [$city['id']]);
                     }
                     
-                    // Soft delete leads directly associated with this state (without city)
-                    $this->db->query("UPDATE leads SET deleted_at = NOW(), updated_by = ? WHERE state_id = ? AND deleted_at IS NULL", 
-                        [getCurrentUserId(), $id]);
+                    // Delete leads directly associated with this state (without city)
+                    $this->db->query("DELETE FROM leads WHERE state_id = ?", [$id]);
                     
-                    // Soft delete cities associated with this state
-                    $this->db->query("UPDATE cities SET deleted_at = NOW(), updated_by = ? WHERE state_id = ? AND deleted_at IS NULL", 
-                        [getCurrentUserId(), $id]);
+                    // Delete cities associated with this state
+                    $this->db->query("DELETE FROM cities WHERE state_id = ?", [$id]);
                     
-                    // Now delete the state
-                    $this->stateModel->softDelete($id);
+                    // Delete employee territories associated with this state
+                    $this->db->query("DELETE FROM employee_territories WHERE state_id = ?", [$id]);
+                    
+                    // Delete audit logs for this state
+                    $this->db->query("DELETE FROM audit_logs WHERE table_name = 'states' AND record_id = ?", [$id]);
+                    
+                    // Now hard delete the state
+                    $this->stateModel->hardDelete($id);
                     
                     $this->db->commit();
-                    setFlashMessage('success', 'State and all associated data deleted successfully');
+                    setFlashMessage('success', 'State and all associated data permanently deleted');
                     redirect('states');
                     exit;
                 } catch (Exception $e) {
@@ -250,18 +279,20 @@ class StateController {
                     exit;
                 }
             } else {
-                // Show confirmation page with counts
+                // Show confirmation page with counts and data
                 $state = $this->stateModel->getById($id);
                 include __DIR__ . '/../views/states/delete_confirm.php';
                 exit;
             }
         }
         
-        // Delete state (soft delete)
-        $result = $this->stateModel->softDelete($id);
+        // Hard delete state with no associated data
+        $result = $this->stateModel->hardDelete($id);
         
         if ($result) {
-            setFlashMessage('success', 'State deleted successfully');
+            // Delete audit logs for this state
+            $this->db->query("DELETE FROM audit_logs WHERE table_name = 'states' AND record_id = ?", [$id]);
+            setFlashMessage('success', 'State permanently deleted');
         } else {
             setFlashMessage('error', 'Failed to delete state');
         }

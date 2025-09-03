@@ -258,6 +258,21 @@ class Lead extends Model {
     }
     
     /**
+     * Hard delete a lead
+     * 
+     * This method completely removes a lead from the database
+     * instead of just marking it as deleted.
+     * 
+     * @param int $id Lead ID
+     * @return bool Success or failure
+     */
+    public function hardDelete($id) {
+        $sql = "DELETE FROM {$this->table} WHERE id = ?";
+        $this->db->query($sql, [$id]);
+        return true;
+    }
+    
+    /**
      * Get lead by ID with related data
      */
     public function getByIdWithRelatedData($id) {

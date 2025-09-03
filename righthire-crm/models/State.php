@@ -114,6 +114,24 @@ class State extends Model {
     }
     
     /**
+     * Get leads by state ID with limit
+     * 
+     * @param int $id State ID
+     * @param int $limit Maximum number of leads to return
+     * @return array Leads data
+     */
+    public function getLeadsByStateId($id, $limit = 10) {
+        $sql = "SELECT l.id, l.name, l.phone, l.email, c.name as city_name
+                FROM leads l
+                LEFT JOIN cities c ON l.city_id = c.id
+                WHERE l.state_id = ? AND l.deleted_at IS NULL
+                ORDER BY l.id DESC
+                LIMIT ?";
+        
+        return $this->db->getRows($sql, [$id, $limit]);
+    }
+    
+    /**
      * Hard delete a state
      * 
      * This method completely removes a state from the database

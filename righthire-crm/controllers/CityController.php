@@ -204,23 +204,41 @@ class CityController {
         // Check if city has leads
         $leadCount = $this->cityModel->getLeadCount($id);
         
+        // Get leads for display in confirmation popup
+        $leads = [];
+        if ($leadCount > 0) {
+            $leads = $this->cityModel->getLeadsByCityId($id, 10); // Limit to 10 for display
+        }
+        
         // If there are leads associated with this city
         if ($leadCount > 0) {
             // If this is a confirmation request
             if (isset($_GET['confirm']) && $_GET['confirm'] == 1) {
-                // Delete all associated leads first (cascade delete)
+                // HARD DELETE all associated data
                 $this->db->beginTransaction();
                 
                 try {
-                    // Soft delete leads associated with this city
-                    $this->db->query("UPDATE leads SET deleted_at = NOW(), updated_by = ? WHERE city_id = ? AND deleted_at IS NULL", 
-                        [getCurrentUserId(), $id]);
+                    // Delete call logs for leads in this city
+                    $this->db->query("DELETE cl FROM call_logs cl 
+                                     INNER JOIN leads l ON cl.lead_id = l.id 
+                                     WHERE l.city_id = ?", [$id]);
                     
-                    // Now soft delete the city
-                    $this->cityModel->softDelete($id);
+                    // Delete audit logs for leads in this city
+                    $this->db->query("DELETE al FROM audit_logs al 
+                                     WHERE al.table_name = 'leads' 
+                                     AND al.record_id IN (SELECT id FROM leads WHERE city_id = ?)", [$id]);
+                    
+                    // Delete leads associated with this city
+                    $this->db->query("DELETE FROM leads WHERE city_id = ?", [$id]);
+                    
+                    // Delete audit logs for this city
+                    $this->db->query("DELETE FROM audit_logs WHERE table_name = 'cities' AND record_id = ?", [$id]);
+                    
+                    // Now hard delete the city
+                    $this->cityModel->hardDelete($id);
                     
                     $this->db->commit();
-                    setFlashMessage('success', 'City and all associated data deleted successfully');
+                    setFlashMessage('success', 'City and all associated data permanently deleted');
                     redirect('cities');
                     exit;
                 } catch (Exception $e) {
@@ -230,7 +248,7 @@ class CityController {
                     exit;
                 }
             } else {
-                // Show confirmation page with counts
+                // Show confirmation page with counts and data
                 $city = $this->cityModel->find($id);
                 $state = $this->stateModel->find($city['state_id']);
                 include VIEWS_PATH . '/cities/delete_confirm.php';
@@ -238,11 +256,13 @@ class CityController {
             }
         }
         
-        // Delete city (soft delete)
-        $result = $this->cityModel->softDelete($id);
+        // Hard delete city with no associated data
+        $result = $this->cityModel->hardDelete($id);
         
         if ($result) {
-            setFlashMessage('success', 'City deleted successfully');
+            // Delete audit logs for this city
+            $this->db->query("DELETE FROM audit_logs WHERE table_name = 'cities' AND record_id = ?", [$id]);
+            setFlashMessage('success', 'City permanently deleted');
         } else {
             setFlashMessage('error', 'Failed to delete city');
         }

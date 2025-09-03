@@ -17,9 +17,9 @@ require_once VIEWS_PATH . '/templates/header.php';
                     <h5 class="mb-0">Confirm Delete</h5>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-warning">
-                        <h4><i class="fas fa-exclamation-triangle"></i> Warning!</h4>
-                        <p>You are about to delete the state <strong><?= htmlspecialchars($state['name']) ?></strong>.</p>
+                    <div class="alert alert-danger">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Warning! PERMANENT DELETION</h4>
+                        <p>You are about to <strong>permanently delete</strong> the state <strong><?= htmlspecialchars($state['name']) ?></strong>.</p>
                         
                         <p>This state has:</p>
                         <ul>
@@ -27,10 +27,70 @@ require_once VIEWS_PATH . '/templates/header.php';
                             <li><strong><?= $leadCount ?></strong> leads associated with it</li>
                         </ul>
                         
-                        <p>Deleting this state will also delete all associated cities and leads. This action cannot be undone.</p>
+                        <p><strong>This is a HARD DELETE operation.</strong> All data will be permanently removed from the database and cannot be recovered.</p>
                         
                         <p>Are you sure you want to proceed?</p>
                     </div>
+                    
+                    <?php if (!empty($cities)): ?>
+                    <div class="card mb-3">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">Associated Cities (<?= count($cities) ?><?= count($cities) < $cityCount ? ' of ' . $cityCount : '' ?>)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>City Name</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($cities as $city): ?>
+                                        <tr>
+                                            <td><?= $city['id'] ?></td>
+                                            <td><?= htmlspecialchars($city['name']) ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($leads)): ?>
+                    <div class="card mb-3">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">Associated Leads (<?= count($leads) ?><?= count($leads) < $leadCount ? ' of ' . $leadCount : '' ?>)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Name</th>
+                                            <th>Phone</th>
+                                            <th>City</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($leads as $lead): ?>
+                                        <tr>
+                                            <td><?= $lead['id'] ?></td>
+                                            <td><?= htmlspecialchars($lead['name']) ?></td>
+                                            <td><?= htmlspecialchars($lead['phone']) ?></td>
+                                            <td><?= htmlspecialchars($lead['city_name'] ?? 'N/A') ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                     
                     <div class="d-flex justify-content-between">
                         <a href="<?= APP_URL ?>/states" class="btn btn-secondary">

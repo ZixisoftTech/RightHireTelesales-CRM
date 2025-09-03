@@ -196,25 +196,33 @@ class City extends Model {
     }
     
     /**
+     * Get leads by city ID with limit
+     * 
+     * @param int $id City ID
+     * @param int $limit Maximum number of leads to return
+     * @return array Leads data
+     */
+    public function getLeadsByCityId($id, $limit = 10) {
+        $sql = "SELECT l.id, l.name, l.phone, l.email
+                FROM leads l
+                WHERE l.city_id = ? AND l.deleted_at IS NULL
+                ORDER BY l.id DESC
+                LIMIT ?";
+        
+        return $this->db->getRows($sql, [$id, $limit]);
+    }
+    
+    /**
      * Hard delete a city
      * 
      * This method completely removes a city from the database
      * instead of just marking it as deleted.
      * 
-     * WARNING: This should only be used when there are no leads associated with the city.
-     * 
      * @param int $id City ID
      * @return bool Success or failure
      */
     public function hardDelete($id) {
-        // First check if there are any leads associated with this city (including soft-deleted leads)
-        $leadCount = $this->getLeadCount($id, true);
-        if ($leadCount > 0) {
-            // Cannot hard delete a city with associated leads
-            return false;
-        }
-        
-        // Safe to delete
+        // Delete the city
         $sql = "DELETE FROM {$this->table} WHERE id = ?";
         $this->db->query($sql, [$id]);
         return true;

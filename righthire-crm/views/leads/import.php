@@ -29,8 +29,8 @@
                     </div>
                     
                     <div class="mb-3">
-                        <a href="<?php echo APP_URL; ?>/assets/samples/leads_import_sample.csv" class="btn btn-outline-primary" download>
-                            <i class="fas fa-download"></i> Download Sample CSV
+                        <a href="<?php echo APP_URL; ?>/leads/downloadSample" class="btn btn-outline-primary">
+                            <i class="fas fa-download"></i> Download Sample Excel File
                         </a>
                     </div>
                     
@@ -216,4 +216,3 @@
 </script>
 
 <?php include 'views/templates/footer.php'; ?>
-

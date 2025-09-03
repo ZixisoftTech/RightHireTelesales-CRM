@@ -129,8 +129,9 @@
     <!-- Today's Follow-ups -->
     <div class="col-lg-4 mb-4">
         <div class="card h-100">
-            <div class="card-header bg-light">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Today's Follow-ups</h5>
+                <span class="badge bg-primary"><?php echo count($todayFollowUps); ?></span>
             </div>
             <div class="card-body p-0">
                 <?php if (empty($todayFollowUps)): ?>
@@ -139,31 +140,49 @@
                         <p class="mb-0">No follow-ups scheduled for today</p>
                     </div>
                 <?php else: ?>
-                    <div class="list-group list-group-flush">
-                        <?php foreach ($todayFollowUps as $followUp): ?>
-                            <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="list-group-item list-group-item-action">
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="mb-1"><?php echo htmlspecialchars($followUp['name']); ?></h6>
-                                        <p class="mb-1 text-muted small">
-                                            <i class="fas fa-phone me-1"></i> <?php echo htmlspecialchars($followUp['phone']); ?>
-                                        </p>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="badge bg-warning">
-                                            <i class="far fa-clock me-1"></i>
-                                            <?php echo date('h:i A', strtotime($followUp['follow_up_date'])); ?>
-                                        </span>
-                                    </div>
-                                </div>
-                            </a>
-                        <?php endforeach; ?>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Lead Name</th>
+                                    <?php if (hasRole('administrator')): ?>
+                                        <th>Employee</th>
+                                    <?php endif; ?>
+                                    <th>Time</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($todayFollowUps as $followUp): ?>
+                                    <tr>
+                                        <td>
+                                            <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>">
+                                                <?php echo htmlspecialchars($followUp['name']); ?>
+                                            </a>
+                                        </td>
+                                        <?php if (hasRole('administrator')): ?>
+                                            <td><?php echo htmlspecialchars($followUp['assigned_to_name']); ?></td>
+                                        <?php endif; ?>
+                                        <td>
+                                            <span class="badge bg-warning">
+                                                <?php echo date('h:i A', strtotime($followUp['follow_up_date'])); ?>
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-success" title="Add Call Log">
+                                                <i class="fas fa-phone"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
                     </div>
                 <?php endif; ?>
             </div>
             <?php if (!empty($todayFollowUps)): ?>
                 <div class="card-footer bg-white text-center">
-                    <a href="<?php echo APP_URL; ?>/leads?status=follow_up" class="btn btn-sm btn-outline-primary">View All Follow-ups</a>
+                    <a href="<?php echo APP_URL; ?>/followups" class="btn btn-sm btn-outline-primary">View All Follow-ups</a>
                 </div>
             <?php endif; ?>
         </div>
@@ -171,8 +190,70 @@
 </div>
 
 <div class="row">
+    <!-- Missed Follow-ups -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Missed Follow-ups</h5>
+                <span class="badge bg-danger"><?php echo count($missedFollowUps); ?></span>
+            </div>
+            <div class="card-body p-0">
+                <?php if (empty($missedFollowUps)): ?>
+                    <div class="text-center p-4">
+                        <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                        <p class="mb-0">No missed follow-ups</p>
+                    </div>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Lead Name</th>
+                                    <?php if (hasRole('administrator')): ?>
+                                        <th>Employee</th>
+                                    <?php endif; ?>
+                                    <th>Missed Date</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($missedFollowUps as $followUp): ?>
+                                    <tr>
+                                        <td>
+                                            <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>">
+                                                <?php echo htmlspecialchars($followUp['name']); ?>
+                                            </a>
+                                        </td>
+                                        <?php if (hasRole('administrator')): ?>
+                                            <td><?php echo htmlspecialchars($followUp['assigned_to_name']); ?></td>
+                                        <?php endif; ?>
+                                        <td>
+                                            <span class="badge bg-danger">
+                                                <?php echo date('d M Y', strtotime($followUp['follow_up_date'])); ?>
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-success" title="Add Call Log">
+                                                <i class="fas fa-phone"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php if (!empty($missedFollowUps)): ?>
+                <div class="card-footer bg-white text-center">
+                    <a href="<?php echo APP_URL; ?>/followups" class="btn btn-sm btn-outline-danger">View All Missed Follow-ups</a>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
     <!-- Daily Call Activity -->
-    <div class="col-lg-8 mb-4">
+    <div class="col-lg-6 mb-4">
         <div class="card h-100">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Daily Call Activity</h5>
@@ -188,7 +269,9 @@
             </div>
         </div>
     </div>
-    
+</div>
+
+<div class="row">
     <!-- Recent Call Logs -->
     <div class="col-lg-4 mb-4">
         <div class="card h-100">
@@ -458,4 +541,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php include 'views/templates/footer.php'; ?>
-

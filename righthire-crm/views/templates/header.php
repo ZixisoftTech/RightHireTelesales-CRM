@@ -61,6 +61,12 @@
                         </a>
                     </li>
                     
+                    <li class="<?php echo strpos($route, 'followups') === 0 ? 'active' : ''; ?>">
+                        <a href="<?php echo APP_URL; ?>/followups">
+                            <i class="fas fa-calendar-check"></i> Follow-ups
+                        </a>
+                    </li>
+                    
                     <li class="<?php echo strpos($route, 'leads') === 0 ? 'active' : ''; ?>">
                         <a href="#leadsSubmenu" data-bs-toggle="collapse" aria-expanded="<?php echo strpos($route, 'leads') === 0 ? 'true' : 'false'; ?>" class="dropdown-toggle">
                             <i class="fas fa-user-tag"></i> Leads
@@ -234,4 +240,3 @@
                 
                 <?php echo displayFlashMessage(); ?>
     <?php endif; ?>
-

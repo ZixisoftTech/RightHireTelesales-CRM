@@ -600,7 +600,7 @@ class LeadController {
                 );
                 
                 if ($updated) {
-                    // Create call log entry
+                    // Create call log entry with follow-up date for all relevant statuses
                     $callLogData = [
                         'lead_id' => $leadId,
                         'status' => $status,

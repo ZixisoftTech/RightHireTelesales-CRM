@@ -722,7 +722,7 @@ class Lead extends Model {
             $params[] = $userId;
         }
         
-        $sql .= " ORDER BY l.follow_up_date ASC";
+        $sql .= " ORDER BY l.follow_up_date DESC";
         
         return $this->db->getRows($sql, $params);
     }
@@ -760,9 +760,153 @@ class Lead extends Model {
             $params[] = $userId;
         }
         
-        $sql .= " ORDER BY l.follow_up_date ASC";
+        $sql .= " ORDER BY l.follow_up_date DESC";
         
         return $this->db->getRows($sql, $params);
+    }
+    
+    /**
+     * Get follow-ups with filters
+     * 
+     * @param int $page Page number
+     * @param string $status Status filter
+     * @param int $stateId State ID filter
+     * @param int $cityId City ID filter
+     * @param int $employeeId Employee ID filter
+     * @param string $startDate Start date filter
+     * @param string $endDate End date filter
+     * @param int $limit Records per page
+     * @return array Follow-ups
+     */
+    public function getFollowUps($page = 1, $status = '', $stateId = 0, $cityId = 0, $employeeId = 0, $startDate = '', $endDate = '', $limit = RECORDS_PER_PAGE) {
+        $userId = getCurrentUserId();
+        $isAdmin = hasRole('administrator');
+        $offset = ($page - 1) * $limit;
+        
+        $sql = "SELECT l.*, s.name as state_name, c.name as city_name, u.name as assigned_to_name,
+                (SELECT MAX(created_at) FROM call_logs WHERE lead_id = l.id AND deleted_at IS NULL) as last_follow_up
+                FROM {$this->table} l
+                LEFT JOIN states s ON l.state_id = s.id
+                LEFT JOIN cities c ON l.city_id = c.id
+                LEFT JOIN users u ON l.assigned_to = u.id
+                WHERE l.deleted_at IS NULL 
+                AND l.follow_up_date IS NOT NULL";
+        
+        $params = [];
+        
+        // Apply status filter
+        if (!empty($status)) {
+            $sql .= " AND l.status = ?";
+            $params[] = $status;
+        }
+        
+        // Apply state filter
+        if ($stateId > 0) {
+            $sql .= " AND l.state_id = ?";
+            $params[] = $stateId;
+        }
+        
+        // Apply city filter
+        if ($cityId > 0) {
+            $sql .= " AND l.city_id = ?";
+            $params[] = $cityId;
+        }
+        
+        // Apply employee filter
+        if ($employeeId > 0) {
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $employeeId;
+        } else if (!$isAdmin) {
+            // If not admin and no specific employee selected, only show assigned leads
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $userId;
+        }
+        
+        // Apply date filters
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(l.follow_up_date) >= ?";
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(l.follow_up_date) <= ?";
+            $params[] = $endDate;
+        }
+        
+        // Order by follow-up date (most recent first)
+        $sql .= " ORDER BY l.follow_up_date DESC";
+        
+        // Apply pagination
+        $sql .= " LIMIT ?, ?";
+        $params[] = $offset;
+        $params[] = $limit;
+        
+        return $this->db->getRows($sql, $params);
+    }
+    
+    /**
+     * Count follow-ups with filters
+     * 
+     * @param string $status Status filter
+     * @param int $stateId State ID filter
+     * @param int $cityId City ID filter
+     * @param int $employeeId Employee ID filter
+     * @param string $startDate Start date filter
+     * @param string $endDate End date filter
+     * @return int Total count
+     */
+    public function countFollowUps($status = '', $stateId = 0, $cityId = 0, $employeeId = 0, $startDate = '', $endDate = '') {
+        $userId = getCurrentUserId();
+        $isAdmin = hasRole('administrator');
+        
+        $sql = "SELECT COUNT(*) as total
+                FROM {$this->table} l
+                WHERE l.deleted_at IS NULL 
+                AND l.follow_up_date IS NOT NULL";
+        
+        $params = [];
+        
+        // Apply status filter
+        if (!empty($status)) {
+            $sql .= " AND l.status = ?";
+            $params[] = $status;
+        }
+        
+        // Apply state filter
+        if ($stateId > 0) {
+            $sql .= " AND l.state_id = ?";
+            $params[] = $stateId;
+        }
+        
+        // Apply city filter
+        if ($cityId > 0) {
+            $sql .= " AND l.city_id = ?";
+            $params[] = $cityId;
+        }
+        
+        // Apply employee filter
+        if ($employeeId > 0) {
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $employeeId;
+        } else if (!$isAdmin) {
+            // If not admin and no specific employee selected, only show assigned leads
+            $sql .= " AND l.assigned_to = ?";
+            $params[] = $userId;
+        }
+        
+        // Apply date filters
+        if (!empty($startDate)) {
+            $sql .= " AND DATE(l.follow_up_date) >= ?";
+            $params[] = $startDate;
+        }
+        
+        if (!empty($endDate)) {
+            $sql .= " AND DATE(l.follow_up_date) <= ?";
+            $params[] = $endDate;
+        }
+        
+        $result = $this->db->getRow($sql, $params);
+        return $result['total'];
     }
     
     /**
@@ -1055,9 +1199,9 @@ class Lead extends Model {
                 'updated_by' => getCurrentUserId()
             ];
             
-            // Handle follow-up date
-            if ($status == 'follow_up') {
-                if (empty($followUpDate)) {
+            // Handle follow-up date for all statuses that need it
+            if ($status == 'follow_up' || $status == 'interested' || $status == 'not_attend' || $status == 'wrong_number') {
+                if ($status == 'follow_up' && empty($followUpDate)) {
                     throw new Exception("Follow-up date is required for follow-up status");
                 }
                 $data['follow_up_date'] = $followUpDate;
@@ -1078,17 +1222,8 @@ class Lead extends Model {
             // Update lead
             $this->update($id, $data);
             
-            // Create call log
-            $callLogData = [
-                'lead_id' => $id,
-                'status' => $status,
-                'remarks' => $remarks,
-                'follow_up_date' => ($status == 'follow_up') ? $followUpDate : null,
-                'other_reason' => ($status == 'other') ? $otherReason : null,
-                'created_by' => getCurrentUserId()
-            ];
-            
-            $this->db->insert('call_logs', $callLogData);
+            // NOTE: We're not creating a call log here anymore to avoid duplication
+            // The call log is now created only in the LeadController
             
             // Commit transaction
             $this->db->commit();

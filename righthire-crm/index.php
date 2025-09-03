@@ -20,6 +20,9 @@ $routes = [
     // Dashboard routes
     'dashboard' => ['controller' => 'DashboardController', 'action' => 'index'],
     
+    // Follow-up routes
+    'followups' => ['controller' => 'FollowUpController', 'action' => 'index'],
+    
     // State routes
     'states' => ['controller' => 'StateController', 'action' => 'index'],
     'states/create' => ['controller' => 'StateController', 'action' => 'create'],

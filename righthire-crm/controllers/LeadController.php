@@ -76,6 +76,18 @@ class LeadController {
             }
         }
         
+        // Auto-assign leads to employees based on territories
+        // Only run auto-assignment if explicitly requested or if there are unassigned leads
+        if (isset($_GET['auto_assign']) || $this->db->getValue("SELECT COUNT(*) FROM leads WHERE assigned_to IS NULL AND deleted_at IS NULL") > 0) {
+            $assignResult = $this->leadModel->autoAssignLeadsByTerritory();
+            
+            if (isset($_GET['auto_assign']) && $_GET['auto_assign'] == 1) {
+                setFlashMessage('success', 'Auto-assignment complete. ' . $assignResult['assigned'] . ' leads assigned to employees based on territories.');
+                redirect('leads');
+                exit;
+            }
+        }
+        
         // Get leads
         $leads = $this->leadModel->getLeads($filters, true, $page, $perPage);
         $totalLeads = $this->leadModel->countLeads($filters);

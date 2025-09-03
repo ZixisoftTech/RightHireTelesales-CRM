@@ -122,7 +122,15 @@
                             <td><?php echo htmlspecialchars($lead['state_name']); ?></td>
                             <td><?php echo htmlspecialchars($lead['city_name']); ?></td>
                             <td><?php echo getStatusBadge($lead['status']); ?></td>
-                            <td><?php echo $lead['assigned_to_name'] ? htmlspecialchars($lead['assigned_to_name']) : '-'; ?></td>
+                            <td>
+                                <?php 
+                                if (isset($lead['assigned_to']) && $lead['assigned_to']) {
+                                    echo isset($lead['assigned_to_name']) && $lead['assigned_to_name'] ? htmlspecialchars($lead['assigned_to_name']) : 'ID: ' . $lead['assigned_to'];
+                                } else {
+                                    echo '-';
+                                }
+                                ?>
+                            </td>
                             <td><?php echo formatDateTime($lead['created_at']); ?></td>
                             <td>
                                 <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="View">
@@ -158,7 +166,7 @@
                     $GLOBALS['db'] = Database::getInstance();
                 }
                 $territories = $GLOBALS['db']->getRows(
-                    "SELECT et.id, s.name as state, c.name as city 
+                    "SELECT et.id, s.name as state, c.name as city, s.id as state_id, c.id as city_id
                     FROM employee_territories et
                     LEFT JOIN states s ON et.state_id = s.id
                     LEFT JOIN cities c ON et.city_id = c.id
@@ -172,23 +180,20 @@
                     echo "Your assigned territories: <ul>";
                     foreach ($territories as $t) {
                         echo "<li>" . htmlspecialchars($t['state']) . 
-                             (isset($t['city']) ? " / " . htmlspecialchars($t['city']) : "") . "</li>";
+                             (isset($t['city']) ? " / " . htmlspecialchars($t['city']) : " (All Cities)") . "</li>";
                     }
                     echo "</ul>";
                     
                     // Check if there are any leads in these territories
                     $territoryLeads = 0;
+                    $assignedLeads = 0;
+                    
                     foreach ($territories as $t) {
-                        $stateId = $GLOBALS['db']->getValue(
-                            "SELECT id FROM states WHERE name = ?", 
-                            [$t['state']]
-                        );
-                        $cityId = isset($t['city']) ? $GLOBALS['db']->getValue(
-                            "SELECT id FROM cities WHERE name = ?", 
-                            [$t['city']]
-                        ) : null;
+                        $stateId = $t['state_id'];
+                        $cityId = isset($t['city_id']) ? $t['city_id'] : null;
                         
                         if ($stateId) {
+                            // Count all leads in this territory
                             $count = $GLOBALS['db']->getValue(
                                 "SELECT COUNT(*) FROM leads 
                                 WHERE state_id = ? " . 
@@ -197,10 +202,101 @@
                                 $cityId ? [$stateId, $cityId] : [$stateId]
                             );
                             $territoryLeads += $count;
+                            
+                            // Count leads assigned to this user
+                            $assignedCount = $GLOBALS['db']->getValue(
+                                "SELECT COUNT(*) FROM leads 
+                                WHERE state_id = ? " . 
+                                ($cityId ? "AND city_id = ? " : "") . 
+                                "AND assigned_to = ? AND deleted_at IS NULL", 
+                                $cityId ? [$stateId, $cityId, $userId] : [$stateId, $userId]
+                            );
+                            $assignedLeads += $assignedCount;
                         }
                     }
                     
                     echo "<p>Total leads in your territories: " . $territoryLeads . "</p>";
+                    echo "<p>Leads assigned directly to you: " . $assignedLeads . "</p>";
+                    
+                    // Check for unassigned leads in territories
+                    $unassignedLeads = 0;
+                    foreach ($territories as $t) {
+                        $stateId = $t['state_id'];
+                        $cityId = isset($t['city_id']) ? $t['city_id'] : null;
+                        
+                        if ($stateId) {
+                            $count = $GLOBALS['db']->getValue(
+                                "SELECT COUNT(*) FROM leads 
+                                WHERE state_id = ? " . 
+                                ($cityId ? "AND city_id = ? " : "") . 
+                                "AND assigned_to IS NULL AND deleted_at IS NULL", 
+                                $cityId ? [$stateId, $cityId] : [$stateId]
+                            );
+                            $unassignedLeads += $count;
+                        }
+                    }
+                    
+                    echo "<p>Unassigned leads in your territories: " . $unassignedLeads . "</p>";
+                    
+                    if ($territoryLeads > 0) {
+                        echo "<p>However, no leads match your current filter criteria. Try adjusting the filters above.</p>";
+                        echo "<p><strong>Note:</strong> If you're seeing this message but have territories assigned, the system will automatically assign leads to you based on your territories. Refresh the page to see your assigned leads.</p>";
+                    }
+                }
+                ?>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (hasRole('administrator')): ?>
+            <div class="alert alert-info mt-3">
+                <strong>Territory Assignment Debug:</strong>
+                <?php
+                // Get all territories
+                $allTerritories = $GLOBALS['db']->getRows(
+                    "SELECT et.id, u.name as employee, s.name as state, c.name as city, s.id as state_id, c.id as city_id
+                    FROM employee_territories et
+                    JOIN users u ON et.user_id = u.id
+                    JOIN states s ON et.state_id = s.id
+                    LEFT JOIN cities c ON et.city_id = c.id
+                    WHERE et.deleted_at IS NULL
+                    ORDER BY u.name, s.name, c.name"
+                );
+                
+                if (empty($allTerritories)) {
+                    echo "<p>No territories assigned to any employees.</p>";
+                } else {
+                    echo "<p>Territory assignments:</p><ul>";
+                    $currentEmployee = '';
+                    foreach ($allTerritories as $t) {
+                        if ($currentEmployee != $t['employee']) {
+                            if ($currentEmployee != '') {
+                                echo "</ul></li>";
+                            }
+                            echo "<li><strong>" . htmlspecialchars($t['employee']) . "</strong>: <ul>";
+                            $currentEmployee = $t['employee'];
+                        }
+                        echo "<li>" . htmlspecialchars($t['state']) . 
+                             (isset($t['city']) ? " / " . htmlspecialchars($t['city']) : " (All Cities)") . "</li>";
+                    }
+                    echo "</ul></li></ul>";
+                    
+                    // Count unassigned leads
+                    $unassignedLeads = $GLOBALS['db']->getValue(
+                        "SELECT COUNT(*) FROM leads WHERE assigned_to IS NULL AND deleted_at IS NULL"
+                    );
+                    
+                    echo "<p>Total unassigned leads: " . $unassignedLeads . "</p>";
+                    
+                    if ($unassignedLeads > 0) {
+                        echo "<p><a href='#' onclick='runAutoAssign(); return false;' class='btn btn-sm btn-primary'>Run Auto-Assignment</a></p>";
+                        echo "<script>
+                            function runAutoAssign() {
+                                if (confirm('This will assign all unassigned leads to employees based on territories. Continue?')) {
+                                    window.location.href = '" . APP_URL . "/leads?auto_assign=1';
+                                }
+                            }
+                        </script>";
+                    }
                 }
                 ?>
             </div>

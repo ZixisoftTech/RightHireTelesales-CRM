@@ -1362,4 +1362,63 @@ class Lead extends Model {
     public function updateLead($id, $data) {
         return $this->update($id, $data);
     }
+    
+    /**
+     * Auto-assign leads to employees based on territories
+     * 
+     * This function will assign all unassigned leads to employees based on their territories.
+     * If multiple employees have the same territory, the lead will be assigned to the first one.
+     * 
+     * @return array Result with count of assigned leads and any errors
+     */
+    public function autoAssignLeadsByTerritory() {
+        $result = [
+            'assigned' => 0,
+            'errors' => []
+        ];
+        
+        try {
+            $this->db->beginTransaction();
+            
+            // Get all unassigned leads
+            $unassignedLeads = $this->db->getRows(
+                "SELECT id, state_id, city_id FROM leads 
+                WHERE assigned_to IS NULL AND deleted_at IS NULL"
+            );
+            
+            foreach ($unassignedLeads as $lead) {
+                // Find employee with matching territory
+                $employeeId = $this->db->getValue(
+                    "SELECT user_id FROM employee_territories 
+                    WHERE deleted_at IS NULL 
+                    AND (
+                        (state_id = ? AND city_id IS NULL) 
+                        OR (state_id = ? AND city_id = ?)
+                    )
+                    ORDER BY 
+                        CASE WHEN city_id IS NOT NULL THEN 1 ELSE 2 END, 
+                        id ASC 
+                    LIMIT 1",
+                    [$lead['state_id'], $lead['state_id'], $lead['city_id']]
+                );
+                
+                if ($employeeId) {
+                    // Assign lead to employee
+                    $updated = $this->update($lead['id'], ['assigned_to' => $employeeId]);
+                    if ($updated) {
+                        $result['assigned']++;
+                    } else {
+                        $result['errors'][] = "Failed to assign lead ID {$lead['id']} to employee ID {$employeeId}";
+                    }
+                }
+            }
+            
+            $this->db->commit();
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            $result['errors'][] = "Error: " . $e->getMessage();
+        }
+        
+        return $result;
+    }
 }

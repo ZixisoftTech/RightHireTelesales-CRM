@@ -24,19 +24,39 @@
                 <form method="POST" action="<?php echo APP_URL; ?>/users/profile">
                     <div class="mb-3">
                         <label for="name" class="form-label required">Name</label>
-                        <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($user['name']); ?>" required>
+                        <?php if (hasRole('administrator')): ?>
+                            <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($user['name']); ?>" required>
+                        <?php else: ?>
+                            <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($user['name']); ?>" readonly>
+                            <input type="hidden" name="name" value="<?php echo htmlspecialchars($user['name']); ?>">
+                        <?php endif; ?>
                     </div>
                     <div class="mb-3">
                         <label for="email" class="form-label required">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                        <?php if (hasRole('administrator')): ?>
+                            <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                        <?php else: ?>
+                            <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" readonly>
+                            <input type="hidden" name="email" value="<?php echo htmlspecialchars($user['email']); ?>">
+                        <?php endif; ?>
                     </div>
                     <div class="mb-3">
                         <label for="phone" class="form-label">Phone</label>
-                        <input type="text" class="form-control" id="phone" name="phone" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>">
+                        <?php if (hasRole('administrator')): ?>
+                            <input type="text" class="form-control" id="phone" name="phone" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>">
+                        <?php else: ?>
+                            <input type="text" class="form-control" id="phone" name="phone" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>" readonly>
+                            <input type="hidden" name="phone" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>">
+                        <?php endif; ?>
                     </div>
                     <div class="mb-3">
                         <label for="address" class="form-label">Address</label>
-                        <textarea class="form-control" id="address" name="address" rows="2"><?php echo htmlspecialchars($user['address'] ?? ''); ?></textarea>
+                        <?php if (hasRole('administrator')): ?>
+                            <textarea class="form-control" id="address" name="address" rows="2"><?php echo htmlspecialchars($user['address'] ?? ''); ?></textarea>
+                        <?php else: ?>
+                            <textarea class="form-control" id="address" name="address" rows="2" readonly><?php echo htmlspecialchars($user['address'] ?? ''); ?></textarea>
+                            <input type="hidden" name="address" value="<?php echo htmlspecialchars($user['address'] ?? ''); ?>">
+                        <?php endif; ?>
                     </div>
                     <div class="mb-3">
                         <label for="role" class="form-label">Role</label>

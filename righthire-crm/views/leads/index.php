@@ -10,10 +10,10 @@
             <a href="<?php echo APP_URL; ?>/leads/import" class="btn btn-sm btn-success me-2">
                 <i class="fas fa-file-import"></i> Import Leads
             </a>
+            <a href="<?php echo APP_URL; ?>/leads/export<?php echo !empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : ''; ?>" class="btn btn-sm btn-secondary">
+                <i class="fas fa-file-export"></i> Export Leads
+            </a>
         <?php endif; ?>
-        <a href="<?php echo APP_URL; ?>/leads/export<?php echo !empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : ''; ?>" class="btn btn-sm btn-secondary">
-            <i class="fas fa-file-export"></i> Export Leads
-        </a>
     </div>
 </div>
 
@@ -128,15 +128,19 @@
                                 <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                <?php if (hasRole('administrator')): ?>
                                 <a href="<?php echo APP_URL; ?>/leads/edit?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                <?php endif; ?>
                                 <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Update Status">
                                     <i class="fas fa-phone-alt"></i>
                                 </a>
+                                <?php if (hasRole('administrator')): ?>
                                 <a href="<?php echo APP_URL; ?>/leads/delete?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-danger" data-bs-toggle="tooltip" title="Delete" onclick="return confirm('Are you sure you want to delete this lead?');">
                                     <i class="fas fa-trash"></i>
                                 </a>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

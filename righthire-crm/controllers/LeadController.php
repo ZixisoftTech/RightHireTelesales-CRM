@@ -243,10 +243,38 @@ class LeadController {
         }
         
         // Check if user has access to this lead
-        if (!hasRole('administrator') && $lead['assigned_to'] != $_SESSION['user_id']) {
-            setFlashMessage('error', 'You do not have permission to view this lead');
-            redirect('leads');
-            exit;
+        if (!hasRole('administrator')) {
+            // Get user's territories
+            $userTerritories = $this->db->getRows(
+                "SELECT state_id, city_id FROM employee_territories 
+                WHERE user_id = ? AND deleted_at IS NULL", 
+                [$_SESSION['user_id']]
+            );
+            
+            // Check if lead is in user's territory
+            $hasAccess = false;
+            
+            // First check if lead is assigned to the user
+            if ($lead['assigned_to'] == $_SESSION['user_id']) {
+                $hasAccess = true;
+            } else {
+                // Check if lead is in user's territory
+                foreach ($userTerritories as $territory) {
+                    if ($territory['state_id'] == $lead['state_id']) {
+                        // If territory is state-wide (no city specified) or city matches
+                        if ($territory['city_id'] === null || $territory['city_id'] == $lead['city_id']) {
+                            $hasAccess = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (!$hasAccess) {
+                setFlashMessage('error', 'You do not have permission to view this lead');
+                redirect('leads');
+                exit;
+            }
         }
         
         // Get call logs
@@ -480,10 +508,38 @@ class LeadController {
         }
         
         // Check if user has access to this lead
-        if (!hasRole('administrator') && $lead['assigned_to'] != $_SESSION['user_id']) {
-            setFlashMessage('error', 'You do not have permission to update this lead');
-            redirect('leads');
-            exit;
+        if (!hasRole('administrator')) {
+            // Get user's territories
+            $userTerritories = $this->db->getRows(
+                "SELECT state_id, city_id FROM employee_territories 
+                WHERE user_id = ? AND deleted_at IS NULL", 
+                [$_SESSION['user_id']]
+            );
+            
+            // Check if lead is in user's territory
+            $hasAccess = false;
+            
+            // First check if lead is assigned to the user
+            if ($lead['assigned_to'] == $_SESSION['user_id']) {
+                $hasAccess = true;
+            } else {
+                // Check if lead is in user's territory
+                foreach ($userTerritories as $territory) {
+                    if ($territory['state_id'] == $lead['state_id']) {
+                        // If territory is state-wide (no city specified) or city matches
+                        if ($territory['city_id'] === null || $territory['city_id'] == $lead['city_id']) {
+                            $hasAccess = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (!$hasAccess) {
+                setFlashMessage('error', 'You do not have permission to update this lead');
+                redirect('leads');
+                exit;
+            }
         }
         
         // Check if form is submitted

@@ -496,11 +496,21 @@ class UserController {
         
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Sanitize input
-            $name = sanitizeInput($_POST['name']);
-            $email = sanitizeInput($_POST['email']);
-            $phone = sanitizeInput($_POST['phone'] ?? '');
-            $address = sanitizeInput($_POST['address'] ?? '');
+            // For employees, we don't allow changing name, email, phone, or address
+            if (hasRole('administrator')) {
+                // Sanitize input
+                $name = sanitizeInput($_POST['name']);
+                $email = sanitizeInput($_POST['email']);
+                $phone = sanitizeInput($_POST['phone'] ?? '');
+                $address = sanitizeInput($_POST['address'] ?? '');
+            } else {
+                // For employees, use existing values
+                $name = $user['name'];
+                $email = $user['email'];
+                $phone = $user['phone'] ?? '';
+                $address = $user['address'] ?? '';
+            }
+            
             $currentPassword = $_POST['current_password'];
             $newPassword = $_POST['new_password'];
             $confirmPassword = $_POST['confirm_password'];
@@ -508,16 +518,19 @@ class UserController {
             // Validate input
             $errors = [];
             
-            if (empty($name)) {
-                $errors[] = 'Name is required';
-            }
-            
-            if (empty($email)) {
-                $errors[] = 'Email is required';
-            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errors[] = 'Invalid email format';
-            } elseif ($this->userModel->emailExists($email, $id)) {
-                $errors[] = 'Email already exists';
+            // Only validate these fields for administrators
+            if (hasRole('administrator')) {
+                if (empty($name)) {
+                    $errors[] = 'Name is required';
+                }
+                
+                if (empty($email)) {
+                    $errors[] = 'Email is required';
+                } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $errors[] = 'Invalid email format';
+                } elseif ($this->userModel->emailExists($email, $id)) {
+                    $errors[] = 'Email already exists';
+                }
             }
             
             // Check if password change is requested

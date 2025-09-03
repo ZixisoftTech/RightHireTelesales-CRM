@@ -6,10 +6,12 @@
         <a href="<?php echo APP_URL; ?>/leads" class="btn btn-sm btn-secondary me-2">
             <i class="fas fa-arrow-left"></i> Back to Leads
         </a>
-        <?php if (hasRole('administrator') || $lead['assigned_to'] == $_SESSION['user_id']): ?>
+        <?php if (hasRole('administrator')): ?>
             <a href="<?php echo APP_URL; ?>/leads/edit?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-primary me-2">
                 <i class="fas fa-edit"></i> Edit Lead
             </a>
+        <?php endif; ?>
+        <?php if (hasRole('administrator') || $lead['assigned_to'] == $_SESSION['user_id']): ?>
             <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-success">
                 <i class="fas fa-phone"></i> Update Status
             </a>
@@ -226,4 +228,3 @@ function getStatusLabel($status) {
 ?>
 
 <?php include 'views/templates/footer.php'; ?>
-

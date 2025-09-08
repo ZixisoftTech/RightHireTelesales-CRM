@@ -519,6 +519,13 @@ class LeadController {
             exit;
         }
         
+        // Prevent updating win/lost leads
+        if ($lead['status'] === 'win' || $lead['status'] === 'lost') {
+            setFlashMessage('error', 'Cannot update status for ' . ($lead['status'] === 'win' ? 'Won' : 'Lost') . ' leads');
+            redirect('leads/view?id=' . $leadId);
+            exit;
+        }
+        
         // Check if user has access to this lead
         if (!hasRole('administrator')) {
             // Get user's territories

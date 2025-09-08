@@ -3,6 +3,18 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Dashboard</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
+        <?php if (hasRole('administrator')): ?>
+        <div class="me-3">
+            <select class="form-select form-select-sm" id="employeeFilter" style="min-width: 150px;">
+                <option value="0" <?php echo (!isset($_GET['employee_id']) || $_GET['employee_id'] == 0) ? 'selected' : ''; ?>>All Employees</option>
+                <?php foreach ($employees as $employee): ?>
+                    <option value="<?php echo $employee['id']; ?>" <?php echo (isset($_GET['employee_id']) && $_GET['employee_id'] == $employee['id']) ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($employee['name']); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
         <div class="btn-group me-2">
             <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshDashboard">
                 <i class="fas fa-sync-alt"></i> Refresh
@@ -491,6 +503,22 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.reload();
     });
     
+    // Employee filter
+    <?php if (hasRole('administrator')): ?>
+    document.getElementById('employeeFilter').addEventListener('change', function() {
+        var employeeId = this.value;
+        var currentUrl = new URL(window.location.href);
+        
+        if (employeeId == 0) {
+            currentUrl.searchParams.delete('employee_id');
+        } else {
+            currentUrl.searchParams.set('employee_id', employeeId);
+        }
+        
+        window.location.href = currentUrl.toString();
+    });
+    <?php endif; ?>
+    
     // Helper function to format date as YYYY-MM-DD
     function formatDate(date) {
         var d = new Date(date),
@@ -507,4 +535,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php include 'views/templates/footer.php'; ?>
-

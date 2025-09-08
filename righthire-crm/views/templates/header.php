@@ -124,30 +124,7 @@
                         </li>
                     <?php endif; ?>
                     
-                    <li class="<?php echo strpos($route, 'reports') === 0 ? 'active' : ''; ?>">
-                        <a href="#reportsSubmenu" data-bs-toggle="collapse" aria-expanded="<?php echo strpos($route, 'reports') === 0 ? 'true' : 'false'; ?>" class="dropdown-toggle">
-                            <i class="fas fa-chart-bar"></i> Reports
-                        </a>
-                        <ul class="collapse list-unstyled <?php echo strpos($route, 'reports') === 0 ? 'show' : ''; ?>" id="reportsSubmenu">
-                            <li>
-                                <a href="<?php echo APP_URL; ?>/reports/lead-status">
-                                    <i class="fas fa-chart-pie"></i> Lead Status
-                                </a>
-                            </li>
-                            <li>
-                                <a href="<?php echo APP_URL; ?>/reports/call-log">
-                                    <i class="fas fa-phone-alt"></i> Call Logs
-                                </a>
-                            </li>
-                            <?php if (hasRole('administrator')): ?>
-                                <li>
-                                    <a href="<?php echo APP_URL; ?>/reports/employee-performance">
-                                        <i class="fas fa-user-chart"></i> Employee Performance
-                                    </a>
-                                </li>
-                            <?php endif; ?>
-                        </ul>
-                    </li>
+
                     
                     <li>
                         <a href="<?php echo APP_URL; ?>/users/profile">

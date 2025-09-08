@@ -155,7 +155,7 @@ class Lead extends Model {
         // Check user role and restrict to assigned leads or territory leads if not admin
         if (!hasRole('administrator') && !isset($filters['assigned_to'])) {
             $userId = getCurrentUserId();
-            $sql .= " AND (l.assigned_to = ? OR EXISTS (
+            $sql .= " AND (l.assigned_to = ? OR (EXISTS (
                 SELECT 1 FROM employee_territories et 
                 WHERE et.user_id = ? 
                 AND et.deleted_at IS NULL 
@@ -163,7 +163,7 @@ class Lead extends Model {
                     (et.state_id = l.state_id AND et.city_id IS NULL) 
                     OR (et.state_id = l.state_id AND et.city_id = l.city_id)
                 )
-            ))";
+            ) AND l.status NOT IN ('win', 'lost')))";
             $params[] = $userId;
             $params[] = $userId;
         }
@@ -233,7 +233,7 @@ class Lead extends Model {
         // Check user role and restrict to assigned leads or territory leads if not admin
         if (!hasRole('administrator') && !isset($filters['assigned_to'])) {
             $userId = getCurrentUserId();
-            $sql .= " AND (l.assigned_to = ? OR EXISTS (
+            $sql .= " AND (l.assigned_to = ? OR (EXISTS (
                 SELECT 1 FROM employee_territories et 
                 WHERE et.user_id = ? 
                 AND et.deleted_at IS NULL 
@@ -241,7 +241,7 @@ class Lead extends Model {
                     (et.state_id = l.state_id AND et.city_id IS NULL) 
                     OR (et.state_id = l.state_id AND et.city_id = l.city_id)
                 )
-            ))";
+            ) AND l.status NOT IN ('win', 'lost')))";
             $params[] = $userId;
             $params[] = $userId;
         }

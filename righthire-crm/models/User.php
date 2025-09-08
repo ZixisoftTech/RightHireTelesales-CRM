@@ -202,10 +202,12 @@ class User extends Model {
     }
     
     /**
-     * Remove employee territory
+     * Remove employee territory (soft delete)
      */
     public function removeEmployeeTerritory($id) {
-        return $this->hardDeleteTerritory($id);
+        $sql = "UPDATE employee_territories SET deleted_at = NOW(), updated_by = ? WHERE id = ?";
+        $this->db->query($sql, [getCurrentUserId(), $id]);
+        return true;
     }
     
     /**

@@ -72,7 +72,7 @@
                     <div id="follow-up-date-group" class="mb-3 d-none">
                         <label for="follow_up_date" class="form-label required">Follow-up Date</label>
                         <input type="text" class="form-control datetimepicker" id="follow_up_date" name="follow_up_date" value="<?php echo isset($_POST['follow_up_date']) ? htmlspecialchars($_POST['follow_up_date']) : ''; ?>">
-                        <div class="form-text">Required for Interested status</div>
+                        <div class="form-text">Required for Interested and In Dealing status</div>
                     </div>
                     <div class="mb-3">
                         <label for="remarks" class="form-label">Remarks</label>
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('region').required = true;
         }
         
-        if (selectedStatus === 'interested') {
+        if (selectedStatus === 'interested' || selectedStatus === 'in_dealing') {
             followUpDateGroup.classList.remove('d-none');
             document.getElementById('follow_up_date').required = true;
         }

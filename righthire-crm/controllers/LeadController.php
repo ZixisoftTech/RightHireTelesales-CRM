@@ -359,7 +359,7 @@ class LeadController {
             $city_id = !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null;
             $assigned_to = isset($_POST['assigned_to']) && !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
             
-            // Validate input
+            // Validate input - only required fields
             $errors = [];
             
             if (empty($name)) {

@@ -95,7 +95,8 @@ class User extends Model {
                     WHEN u.role = 'administrator' THEN 'Administrator' 
                     WHEN u.role = 'employee' THEN 'Employee' 
                     ELSE u.role 
-                END AS role_name
+                END AS role_name,
+                (SELECT COUNT(*) FROM leads l WHERE l.assigned_to = u.id AND l.deleted_at IS NULL) AS lead_count
                 FROM {$this->table} u
                 WHERE u.deleted_at IS NULL
                 ORDER BY u.id DESC

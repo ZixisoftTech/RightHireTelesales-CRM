@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `address` text DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('administrator','employee') NOT NULL DEFAULT 'employee',
   `status` tinyint(1) NOT NULL DEFAULT 1,
@@ -177,4 +179,3 @@ CREATE TABLE IF NOT EXISTS `password_reset_tokens` (
 INSERT INTO `users` (`name`, `email`, `password`, `role`, `status`, `created_at`)
 VALUES ('Administrator', 'sales@getrighthire.com', '$2y$12$1WtUipmLkkmRQo0.Y9.8eeXaMZxXRh0zw1v.XNLxHECPQhhO9iMVu', 'administrator', 1, NOW());
 -- Password: Sales@112233
-

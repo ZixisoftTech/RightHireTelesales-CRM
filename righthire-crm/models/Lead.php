@@ -9,7 +9,7 @@ require_once 'Model.php';
 
 class Lead extends Model {
     protected $table = 'leads';
-    protected $fillable = ['name', 'email', 'phone', 'address', 'state_id', 'city_id', 'status', 'other_reason', 'follow_up_date', 'remarks', 'assigned_to'];
+    protected $fillable = ['name', 'email', 'phone', 'address', 'state_id', 'city_id', 'status', 'other_reason', 'follow_up_date', 'remarks', 'assigned_to', 'updated_by', 'updated_at'];
     
     /**
      * Override the create method to handle city_id being NULL and assigned_to validation

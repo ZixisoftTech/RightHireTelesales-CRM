@@ -140,9 +140,11 @@
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 <?php endif; ?>
+                                <?php if ($lead['status'] !== 'win' && $lead['status'] !== 'lost'): ?>
                                 <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Update Status">
                                     <i class="fas fa-phone-alt"></i>
                                 </a>
+                                <?php endif; ?>
                                 <?php if (hasRole('administrator')): ?>
                                 <a href="<?php echo APP_URL; ?>/leads/delete?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-danger" data-bs-toggle="tooltip" title="Delete" onclick="return confirm('Are you sure you want to delete this lead?');">
                                     <i class="fas fa-trash"></i>

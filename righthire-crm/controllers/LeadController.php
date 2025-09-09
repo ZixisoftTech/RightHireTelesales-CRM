@@ -561,6 +561,13 @@ class LeadController {
             }
         }
         
+        // Check if lead status is WIN or LOST (cannot be updated)
+        if ($lead['status'] === 'win' || $lead['status'] === 'lost') {
+            setFlashMessage('error', 'Cannot update status for ' . ($lead['status'] === 'win' ? 'Won' : 'Lost') . ' leads');
+            redirect('leads/view?id=' . $leadId);
+            exit;
+        }
+        
         // Check if form is submitted
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Sanitize input
@@ -585,6 +592,13 @@ class LeadController {
                 $errors[] = 'Follow-up date is required for ' . ($status === 'interested' ? 'Interested' : 'In Dealing') . ' status';
             } else if ($status === 'interested' || $status === 'in_dealing') {
                 $follow_up_date = sanitizeInput($_POST['follow_up_date']);
+                
+                // Validate follow-up date is not in the past
+                $followUpDateTime = strtotime($follow_up_date);
+                $today = strtotime(date('Y-m-d'));
+                if ($followUpDateTime < $today) {
+                    $errors[] = 'Follow-up date cannot be in the past';
+                }
             }
             
             // Prevent follow-ups for WON/LOST leads

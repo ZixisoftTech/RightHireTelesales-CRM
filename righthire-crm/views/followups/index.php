@@ -142,9 +142,11 @@
                                     <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-info" title="View Lead">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    <?php if ($followUp['status'] !== 'win' && $followUp['status'] !== 'lost'): ?>
                                     <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $followUp['id']; ?>" class="btn btn-sm btn-success" title="Add Call Log">
                                         <i class="fas fa-phone"></i>
                                     </a>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

@@ -1,4 +1,4 @@
-    <?php if (isLoggedIn()): ?>
+<?php if (isLoggedIn()): ?>
                 </div>
                 <!-- End Main Content -->
             </div>
@@ -73,7 +73,8 @@
                 allowInput: true,
                 altInput: true,
                 altFormat: "F j, Y at h:i K",
-                disableMobile: true
+                disableMobile: true,
+                minDate: "today"
             });
             
             // Toggle sidebar on mobile
@@ -169,4 +170,3 @@
     </script>
 </body>
 </html>
-

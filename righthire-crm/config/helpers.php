@@ -41,6 +41,7 @@ function getStatusBadge($status) {
         'new' => 'bg-primary',
         'follow_up' => 'bg-warning',
         'interested' => 'bg-info',
+        'in_dealing' => 'bg-warning',
         'not_interested' => 'bg-secondary',
         'not_attend' => 'bg-danger',
         'wrong_number' => 'bg-danger',

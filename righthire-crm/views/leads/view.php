@@ -11,7 +11,7 @@
                 <i class="fas fa-edit"></i> Edit Lead
             </a>
         <?php endif; ?>
-        <?php if (hasRole('administrator') || $lead['assigned_to'] == $_SESSION['user_id']): ?>
+        <?php if ((hasRole('administrator') || $lead['assigned_to'] == $_SESSION['user_id']) && $lead['status'] !== 'win' && $lead['status'] !== 'lost'): ?>
             <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-success">
                 <i class="fas fa-phone"></i> Update Status
             </a>
@@ -159,7 +159,7 @@
                 }
             }
             
-            if ($hasAccess && $lead['status'] !== 'won' && $lead['status'] !== 'lost'): 
+            if ($hasAccess && $lead['status'] !== 'win' && $lead['status'] !== 'lost'): 
             ?>
                 <div class="card-footer bg-light">
                     <a href="<?php echo APP_URL; ?>/leads/update-status?id=<?php echo $lead['id']; ?>" class="btn btn-sm btn-success w-100">

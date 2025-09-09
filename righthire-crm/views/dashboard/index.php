@@ -179,9 +179,11 @@
                                                 <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-outline-primary" title="View Lead">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
+                                                <?php if ($followUp['status'] !== 'win' && $followUp['status'] !== 'lost'): ?>
                                                 <a href="<?php echo APP_URL; ?>/call-logs/add?lead_id=<?php echo $followUp['id']; ?>" class="btn btn-outline-success" title="Add Call Log">
                                                     <i class="fas fa-phone-alt"></i>
                                                 </a>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>
@@ -260,9 +262,11 @@
                                                 <a href="<?php echo APP_URL; ?>/leads/view?id=<?php echo $followUp['id']; ?>" class="btn btn-outline-primary" title="View Lead">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
+                                                <?php if ($followUp['status'] !== 'win' && $followUp['status'] !== 'lost'): ?>
                                                 <a href="<?php echo APP_URL; ?>/call-logs/add?lead_id=<?php echo $followUp['id']; ?>" class="btn btn-outline-success" title="Add Call Log">
                                                     <i class="fas fa-phone-alt"></i>
                                                 </a>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>

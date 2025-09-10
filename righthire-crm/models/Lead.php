@@ -665,13 +665,37 @@ class Lead extends Model {
         
         $params = [];
         
-        // Apply employee filter
+        // Apply employee filter with territory support
         if ($employeeId > 0) {
-            $sql .= " AND assigned_to = ?";
-            $params[] = $employeeId;
+            if ($isAdmin) {
+                $sql .= " AND assigned_to = ?";
+                $params[] = $employeeId;
+            } else {
+                // For non-admin users, show assigned leads OR territory leads
+                $sql .= " AND (assigned_to = ? OR EXISTS (
+                    SELECT 1 FROM employee_territories et 
+                    WHERE et.user_id = ? 
+                    AND et.deleted_at IS NULL 
+                    AND (
+                        (et.state_id = state_id AND et.city_id IS NULL) 
+                        OR (et.state_id = state_id AND et.city_id = city_id)
+                    )
+                ))";
+                $params[] = $employeeId;
+                $params[] = $employeeId;
+            }
         } else if (!$isAdmin) {
-            // If not admin and no specific employee selected, only show assigned leads
-            $sql .= " AND assigned_to = ?";
+            // If not admin and no specific employee selected, show assigned leads OR territory leads
+            $sql .= " AND (assigned_to = ? OR EXISTS (
+                SELECT 1 FROM employee_territories et 
+                WHERE et.user_id = ? 
+                AND et.deleted_at IS NULL 
+                AND (
+                    (et.state_id = state_id AND et.city_id IS NULL) 
+                    OR (et.state_id = state_id AND et.city_id = city_id)
+                )
+            ))";
+            $params[] = $userId;
             $params[] = $userId;
         }
         
@@ -719,13 +743,37 @@ class Lead extends Model {
         
         $params = [$today];
         
-        // Apply employee filter
+        // Apply employee filter with territory support
         if ($employeeId > 0) {
-            $sql .= " AND l.assigned_to = ?";
-            $params[] = $employeeId;
+            if ($isAdmin) {
+                $sql .= " AND l.assigned_to = ?";
+                $params[] = $employeeId;
+            } else {
+                // For non-admin users, show assigned leads OR territory leads
+                $sql .= " AND (l.assigned_to = ? OR EXISTS (
+                    SELECT 1 FROM employee_territories et 
+                    WHERE et.user_id = ? 
+                    AND et.deleted_at IS NULL 
+                    AND (
+                        (et.state_id = l.state_id AND et.city_id IS NULL) 
+                        OR (et.state_id = l.state_id AND et.city_id = l.city_id)
+                    )
+                ))";
+                $params[] = $employeeId;
+                $params[] = $employeeId;
+            }
         } else if (!$isAdmin) {
-            // If not admin and no specific employee selected, only show assigned leads
-            $sql .= " AND l.assigned_to = ?";
+            // If not admin and no specific employee selected, show assigned leads OR territory leads
+            $sql .= " AND (l.assigned_to = ? OR EXISTS (
+                SELECT 1 FROM employee_territories et 
+                WHERE et.user_id = ? 
+                AND et.deleted_at IS NULL 
+                AND (
+                    (et.state_id = l.state_id AND et.city_id IS NULL) 
+                    OR (et.state_id = l.state_id AND et.city_id = l.city_id)
+                )
+            ))";
+            $params[] = $userId;
             $params[] = $userId;
         }
         
@@ -759,13 +807,37 @@ class Lead extends Model {
         
         $params = [$today];
         
-        // Apply employee filter
+        // Apply employee filter with territory support
         if ($employeeId > 0) {
-            $sql .= " AND l.assigned_to = ?";
-            $params[] = $employeeId;
+            if ($isAdmin) {
+                $sql .= " AND l.assigned_to = ?";
+                $params[] = $employeeId;
+            } else {
+                // For non-admin users, show assigned leads OR territory leads
+                $sql .= " AND (l.assigned_to = ? OR EXISTS (
+                    SELECT 1 FROM employee_territories et 
+                    WHERE et.user_id = ? 
+                    AND et.deleted_at IS NULL 
+                    AND (
+                        (et.state_id = l.state_id AND et.city_id IS NULL) 
+                        OR (et.state_id = l.state_id AND et.city_id = l.city_id)
+                    )
+                ))";
+                $params[] = $employeeId;
+                $params[] = $employeeId;
+            }
         } else if (!$isAdmin) {
-            // If not admin and no specific employee selected, only show assigned leads
-            $sql .= " AND l.assigned_to = ?";
+            // If not admin and no specific employee selected, show assigned leads OR territory leads
+            $sql .= " AND (l.assigned_to = ? OR EXISTS (
+                SELECT 1 FROM employee_territories et 
+                WHERE et.user_id = ? 
+                AND et.deleted_at IS NULL 
+                AND (
+                    (et.state_id = l.state_id AND et.city_id IS NULL) 
+                    OR (et.state_id = l.state_id AND et.city_id = l.city_id)
+                )
+            ))";
+            $params[] = $userId;
             $params[] = $userId;
         }
         
@@ -933,39 +1005,66 @@ class Lead extends Model {
         $userId = getCurrentUserId();
         $isAdmin = hasRole('administrator');
         
-        // Get call counts for the last 7 days by default
+        // Get call counts for the last 7 days by default with territory filtering
         $sql = "SELECT 
-                    DATE(created_at) as call_date,
+                    DATE(cl.created_at) as call_date,
                     COUNT(*) as call_count
-                FROM call_logs
-                WHERE deleted_at IS NULL";
+                FROM call_logs cl
+                JOIN leads l ON cl.lead_id = l.id
+                WHERE cl.deleted_at IS NULL AND l.deleted_at IS NULL";
         
         $params = [];
         
         // Apply date filters
         if (!empty($startDate)) {
-            $sql .= " AND DATE(created_at) >= ?";
+            $sql .= " AND DATE(cl.created_at) >= ?";
             $params[] = $startDate;
         } else {
-            $sql .= " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+            $sql .= " AND cl.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
         }
         
         if (!empty($endDate)) {
-            $sql .= " AND DATE(created_at) <= ?";
+            $sql .= " AND DATE(cl.created_at) <= ?";
             $params[] = $endDate;
         }
         
-        // Apply employee filter
+        // Apply employee filter with territory support
         if ($employeeId > 0) {
-            $sql .= " AND created_by = ?";
-            $params[] = $employeeId;
+            if ($isAdmin) {
+                $sql .= " AND cl.created_by = ?";
+                $params[] = $employeeId;
+            } else {
+                // For non-admin users, show calls for assigned leads OR territory leads
+                $sql .= " AND cl.created_by = ? AND (l.assigned_to = ? OR EXISTS (
+                    SELECT 1 FROM employee_territories et 
+                    WHERE et.user_id = ? 
+                    AND et.deleted_at IS NULL 
+                    AND (
+                        (et.state_id = l.state_id AND et.city_id IS NULL) 
+                        OR (et.state_id = l.state_id AND et.city_id = l.city_id)
+                    )
+                ))";
+                $params[] = $employeeId;
+                $params[] = $employeeId;
+                $params[] = $employeeId;
+            }
         } else if (!$isAdmin) {
-            // If not admin and no specific employee selected, only show calls made by the user
-            $sql .= " AND created_by = ?";
+            // If not admin and no specific employee selected, show calls for assigned leads OR territory leads
+            $sql .= " AND cl.created_by = ? AND (l.assigned_to = ? OR EXISTS (
+                SELECT 1 FROM employee_territories et 
+                WHERE et.user_id = ? 
+                AND et.deleted_at IS NULL 
+                AND (
+                    (et.state_id = l.state_id AND et.city_id IS NULL) 
+                    OR (et.state_id = l.state_id AND et.city_id = l.city_id)
+                )
+            ))";
+            $params[] = $userId;
+            $params[] = $userId;
             $params[] = $userId;
         }
         
-        $sql .= " GROUP BY DATE(created_at) ORDER BY call_date ASC";
+        $sql .= " GROUP BY DATE(cl.created_at) ORDER BY call_date ASC";
         return $this->db->getRows($sql, $params);
     }
     

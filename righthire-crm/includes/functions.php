@@ -242,11 +242,14 @@ function getStatusBadge($status) {
         case 'interested':
             $badgeClass = 'bg-info';
             break;
+        case 'in_dealing':
+            $badgeClass = 'bg-in-dealing';
+            break;
         case 'won':
             $badgeClass = 'bg-success';
             break;
         case 'lost':
-            $badgeClass = 'bg-danger';
+            $badgeClass = 'bg-lost';
             break;
     }
     

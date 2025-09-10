@@ -41,12 +41,12 @@ function getStatusBadge($status) {
         'new' => 'bg-primary',
         'follow_up' => 'bg-warning',
         'interested' => 'bg-info',
-        'in_dealing' => 'bg-warning',
+        'in_dealing' => 'bg-in-dealing',
         'not_interested' => 'bg-secondary',
         'not_attend' => 'bg-danger',
         'wrong_number' => 'bg-danger',
         'win' => 'bg-success',
-        'lost' => 'bg-dark',
+        'lost' => 'bg-lost',
         'dead' => 'bg-danger',
         'other' => 'bg-secondary'
     ];

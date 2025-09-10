@@ -361,6 +361,16 @@ a {
     border-radius: 0.25rem;
 }
 
+.bg-in-dealing {
+    background-color: #9112BC !important;
+    color: white !important;
+}
+
+.bg-lost {
+    background-color: #C9CDCF !important;
+    color: #333 !important;
+}
+
 /* Auth Pages */
 .auth-container {
     display: flex;

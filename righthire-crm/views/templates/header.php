@@ -24,7 +24,7 @@
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     
     <!-- Custom CSS -->
-    <link href="<?php echo APP_URL; ?>/assets/css/style.css" rel="stylesheet">
+    <link href="<?php echo APP_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>" rel="stylesheet">
     
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

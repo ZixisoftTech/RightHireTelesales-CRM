@@ -361,12 +361,26 @@ a {
     border-radius: 0.25rem;
 }
 
-.bg-in-dealing {
+/* Custom Status Badge Colors - Override Bootstrap */
+.badge.bg-in-dealing {
+    background-color: #9112BC !important;
+    color: white !important;
+    border: none !important;
+}
+
+.badge.bg-lost {
+    background-color: #C9CDCF !important;
+    color: #333 !important;
+    border: none !important;
+}
+
+/* Additional specificity for table cells */
+td .badge.bg-in-dealing {
     background-color: #9112BC !important;
     color: white !important;
 }
 
-.bg-lost {
+td .badge.bg-lost {
     background-color: #C9CDCF !important;
     color: #333 !important;
 }
